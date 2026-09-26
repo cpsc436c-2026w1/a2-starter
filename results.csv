@@ -1,0 +1,1 @@
+stage,resource_id,nodes,phase,predicted_s,wall_s,startup_s,shuffle_write_bytes,task_min_s,task_med_s,task_max_s,cost_usd

@@ -1,0 +1,29 @@
+project:
+  type: website
+  output-dir: docs
+  render:
+    - a2.qmd
+    - job-aid.md
+
+website:
+  title: "CPSC 436C A2"
+  page-navigation: true
+  navbar:
+    left:
+      - href: a2.qmd
+        text: Assignment
+      - href: job-aid.md
+        text: Job aid
+      - text: Repository
+        href: https://github.com/cpsc436c-2026w1/a2-starter
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+
+execute:
+  enabled: false
