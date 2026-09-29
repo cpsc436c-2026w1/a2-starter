@@ -36,3 +36,7 @@ tr.secured-row .wk { color: var(--secured); font-weight:700; }
 .cal th{ background:#f5f7f9; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:#5c6b7a; }
 .cal td, .cal th{ padding:.5rem .65rem; vertical-align:top; border-bottom:1px solid #edf1f4; }
 .scroll{ overflow-x:auto; }
+
+/* a file name that links to the repo should look like a link, not like plain code */
+a > code { color: var(--bs-link-color); text-decoration: underline; text-underline-offset: 2px; }
+a:hover > code { color: var(--bs-link-hover-color); }
