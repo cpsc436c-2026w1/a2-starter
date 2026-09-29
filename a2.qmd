@@ -113,7 +113,6 @@ read it before you run it:
 - [`stages/stage1_duckdb.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py): runs Stage 1, DuckDB reading the trip files from S3 and writing the model matrix
 - [`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py): the one Spark job behind Stages 2a, 2b and 3, on EMR and on Glue
 - [`stages/parse_run_log.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py): turns a run's metrics blocks into `results.csv` rows
-- [`harness/run_local.sh`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/harness/run_local.sh): the whole pipeline offline on synthetic data, no AWS
 - [`results.csv`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/results.csv): the header you fill in, one row per stage and phase
 
 The scripts above also time themselves and print metrics, which makes the work hard to see. Two shorter files hold only the work, the same queries and computation with the timing left out. They are for reading; the graded runs use the scripts above.
@@ -323,8 +322,7 @@ wrote, or paste the printed row in and type your prediction back into it. The pa
 `predicted_s`. That number is yours, and the notebook cell you wrote it in is what dates it.
 
 Before you parse a log, glance at [Did the run work?](#did-the-run-work) below:
-four lines that tell you whether the run is worth reading at all. For a free pre-flight,
-[`harness/run_local.sh`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/harness/run_local.sh) runs the same pipeline offline on synthetic data.
+four lines that tell you whether the run is worth reading at all.
 
 []{#did-the-run-work}
 

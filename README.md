@@ -13,7 +13,6 @@ and the released version is the one that counts.
 | `stages/stage1_duckdb.py` | Stage 1: scan, filter, project to the model matrix |
 | `stages/stage2_spark.py` | Stages 2a, 2b and 3: the Spark job, submitted to EMR and to Glue unchanged |
 | `stages/parse_run_log.py` | turns a run's log into a `results.csv` row |
-| `stages/sample_data.py`, `harness/run_local.sh` | the offline harness: the whole pipeline on synthetic data, no AWS |
 | `results.csv` | the results file, header only; keep it on your laptop |
 | `examples/extra-packages/` | not part of A2: how to add Python packages to an EMR cluster with uv, and what DuckDB does inside a Spark job |
 
