@@ -4114,6 +4114,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
   <li><a href="#roadmap" id="toc-roadmap" class="nav-link" data-scroll-target="#roadmap">Roadmap</a></li>
   <li><a href="#setup" id="toc-setup" class="nav-link" data-scroll-target="#setup">Setup</a>
   <ul class="collapse">
+  <li><a href="#code" id="toc-code" class="nav-link" data-scroll-target="#code">The code you run</a></li>
   <li><a href="#variables" id="toc-variables" class="nav-link" data-scroll-target="#variables">Your shells and variables</a></li>
   <li><a href="#roles" id="toc-roles" class="nav-link" data-scroll-target="#roles">Roles</a></li>
   <li><a href="#bucket-and-data" id="toc-bucket-and-data" class="nav-link" data-scroll-target="#bucket-and-data">Bucket and data</a></li>
@@ -4248,7 +4249,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <h1>Setup</h1>
 <p><code>rubric={correctness:10}</code></p>
 <ul>
-<li>Create every resource in region <code>ca-central-1</code>. Accept the default network settings, and accept the defaults everywhere else unless this page or the commands tells you otherwise.</li>
+<li>Create every resource in region <code>ca-central-1</code>. Accept the default network settings, and accept the defaults everywhere else unless this page tells you otherwise.</li>
 <li>Your CWL goes in the name of every resource you create: bucket, instance, cluster, Glue job.</li>
 <li>The starter cluster config terminates itself when idle. Do not remove that setting.</li>
 <li>Discuss the approach freely. Your measurements and your answers come from your own account.</li>
@@ -4266,6 +4267,17 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <p>Terminate from the console, then check your budget the next morning. It is not enough to send the command from the console or the CLI: you <em>need</em> to confirm both the result in the AWS console <em>and</em> the spend on your budget, which refreshes from billing about once a day. If you leave a 4-core cluster overnight, it will cost you about $12 and eat a large chunk of your course budget.</p>
 </div>
 </div>
+<section id="code" class="level2">
+<h2 class="anchored" data-anchor-id="code">The code you run</h2>
+<p>Everything you run is in the starter repository. Each file opens on GitHub, so you can read it before you run it:</p>
+<ul>
+<li><a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py"><code>stages/stage1_duckdb.py</code></a>: runs Stage 1, DuckDB reading the trip files from S3 and writing the model matrix</li>
+<li><a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py"><code>stages/stage2_spark.py</code></a>: the one Spark job behind Stages 2a, 2b and 3, on EMR and on Glue</li>
+<li><a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py"><code>stages/parse_run_log.py</code></a>: turns a run’s metrics blocks into <code>results.csv</code> rows</li>
+<li><a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/harness/run_local.sh"><code>harness/run_local.sh</code></a>: the whole pipeline offline on synthetic data, no AWS</li>
+<li><a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/results.csv"><code>results.csv</code></a>: the header you fill in, one row per stage and phase</li>
+</ul>
+</section>
 <section id="variables" class="level2">
 <h2 class="anchored" data-anchor-id="variables">Your shells and variables</h2>
 <p>Everything in this assignment runs in the AWS console, in your browser. There is no AWS command to run on your laptop, which only keeps <code>results.csv</code> and your screenshots. Two shells do the work:</p>
@@ -4380,7 +4392,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>A general (simplified!) rule: instances and services get roles, people get accounts with logins. If you need to assign some permissions to an EC2 instance, an EMR cluster or Glue, you need to create a role allowing them to do something on your behalf. Remember that in A1 we created instance and execution roles; here in A2 we use the default EMR service roles and create a Glue role following the commands, and in Stage 3 you will create one custom yourself. Every time you see an “access denied” type of error, you need to check for a missing role, or a permission you need to add.</p>
+<p>A general (simplified!) rule: instances and services get roles, people get accounts with logins. If you need to assign some permissions to an EC2 instance, an EMR cluster or Glue, you need to create a role allowing them to do something on your behalf. Remember that in A1 we created instance and execution roles; here in A2 we use the default EMR service roles and create a Glue role following the 📋 commands in Stage 3, and in Stage 3 you will create one custom yourself. Every time you see an “access denied” type of error, you need to check for a missing role, or a permission you need to add.</p>
 </div>
 </div>
 </section>
@@ -4435,8 +4447,8 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <h2 class="anchored" data-anchor-id="the-results-file">The results file</h2>
 <p><code>results.csv</code> ships with the assignment, header only. Keep it on your laptop, from the first row you write to the moment you submit, and append one row per stage-phase there: seven rows in all, one for Stage 1, two each for Stages 2a and 2b, two for Stage 3. Nothing you run in the cloud writes to this file. The Stage 1 instance is terminated before you hand anything in, so a copy that lives only on it is a copy you lose.</p>
 <p>Four of its columns need explaining. <code>resource_id</code> is the instance, cluster, or Glue job-run ID, and it has to match a screenshot. <code>predicted_s</code> is your prediction, entered <strong>before</strong> the run. <code>wall_s</code> and <code>startup_s</code> stay in separate columns. <code>cost_usd</code> comes from AWS’s price pages for <a href="https://aws.amazon.com/ec2/pricing/on-demand/">EC2 on-demand instances</a>, <a href="https://aws.amazon.com/emr/pricing/">EMR</a> and <a href="https://aws.amazon.com/glue/pricing/">Glue</a>, read for ca-central-1, not from the billing console.</p>
-<p>The order of work within a row is fixed. Write that row’s <code>predicted_s</code> from the prediction block first, before you launch anything. Then run the stage, tee its output to a log file, and hand the log to <code>stages/parse_run_log.py</code>, which prints the measured row to the shell with <code>predicted_s</code> empty by design. Copy the measured values into the row you already wrote, or paste the printed row in and type your prediction back into it. The parser never produces <code>predicted_s</code>. That number is yours, and the notebook cell you wrote it in is what dates it.</p>
-<p>Before you parse a log, glance at <a href="#did-the-run-work">Did the run work?</a> below: four lines that tell you whether the run is worth reading at all. For a free pre-flight, <code>harness/run_local.sh</code> runs the same pipeline offline on synthetic data.</p>
+<p>The order of work within a row is fixed. Write that row’s <code>predicted_s</code> from the prediction block first, before you launch anything. Then run the stage, tee its output to a log file, and hand the log to <a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py"><code>stages/parse_run_log.py</code></a>, which prints the measured row to the shell with <code>predicted_s</code> empty by design. Copy the measured values into the row you already wrote, or paste the printed row in and type your prediction back into it. The parser never produces <code>predicted_s</code>. That number is yours, and the notebook cell you wrote it in is what dates it.</p>
+<p>Before you parse a log, glance at <a href="#did-the-run-work">Did the run work?</a> below: four lines that tell you whether the run is worth reading at all. For a free pre-flight, <a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/harness/run_local.sh"><code>harness/run_local.sh</code></a> runs the same pipeline offline on synthetic data.</p>
 <p><span id="did-the-run-work"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Did the run work?">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
@@ -4465,7 +4477,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <section id="stage-1" class="level1">
 <h1>Stage 1. DuckDB on one EC2 instance</h1>
 <p>⚙️ <strong>Data engineering:</strong> what one instance costs in time to read a large Parquet dataset out of S3, and how much of each file it has to move to do it.</p>
-<p><code>stages/stage1_duckdb.py</code> points DuckDB at the raw trip files in S3. It filters to the study window, January 2022 through March 2025, and to valid records, keeps the 6 columns the model needs out of the 19 each file carries (20 in the 2025 files), and writes the result back to S3 as <code>matrix.parquet</code>, the model matrix Stage 2a reads. It runs on one EC2 instance, an <code>m7g.xlarge</code> with 4 vCPU, with no cluster involved, and measures one pass over data: read rows, drop most of them, write what is left.</p>
+<p><a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py"><code>stages/stage1_duckdb.py</code></a> points DuckDB at the raw trip files in S3. It filters to the study window, January 2022 through March 2025, and to valid records, keeps the 6 columns the model needs out of the 19 each file carries (20 in the 2025 files), and writes the result back to S3 as <code>matrix.parquet</code>, the model matrix Stage 2a reads. It runs on one EC2 instance, an <code>m7g.xlarge</code> with 4 vCPU, with no cluster involved, and measures one pass over data: read rows, drop most of them, write what is left.</p>
 <p>Before that pass it reads the same columns once without writing, so that <code>t_read_s</code> prices the read on its own. The supplied stage runs in one DuckDB process. On the following steps we will run this on EMR cluster with Spark.</p>
 <section id="predict" class="level2">
 <h2 class="anchored" data-anchor-id="predict">1.1 Predict</h2>
@@ -4522,7 +4534,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--query</span> <span class="st">&#39;Instances[0].InstanceId&#39;</span> <span class="at">--output</span> text<span class="va">)</span></span>
 <span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="ex">save</span> INSTANCE_ID <span class="st">&quot;</span><span class="va">$INSTANCE_ID</span><span class="st">&quot;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The root volume is sized at 60 GiB because the AL2023 default of 8 GiB leaves little room once the Python toolchain and its packages are installed. The raw files never touch this disk: DuckDB reads them from S3 and writes its result back there. <code>/dev/xvda</code> is AL2023’s root device name. The image name ends in <code>arm64</code> because an <code>m7g.xlarge</code> is a Graviton (ARM) instance, and an <code>x86_64</code> image does not boot on it. If you launch from the console instead, pick the 64-bit (Arm) architecture for the same reason.</p>
-<p>Connect from the EC2 console: select the instance, choose Connect, then the Session Manager tab. There is no key pair and no inbound SSH rule anywhere in this assignment. The session opens in <code>/usr/bin</code>, a folder you cannot write to, so the first line below moves to your home folder. Then clone the repo and work from its root, because <code>stages/stage1_duckdb.py</code> imports a helper out of <code>stages/stage2_spark.py</code> and a single copied file will not run.</p>
+<p>Connect from the EC2 console: select the instance, choose Connect, then the Session Manager tab. There is no key pair and no inbound SSH rule anywhere in this assignment. The session opens in <code>/usr/bin</code>, a folder you cannot write to, so the first line below moves to your home folder. Then clone the repo and work from its root, because <a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py"><code>stages/stage1_duckdb.py</code></a> imports a helper out of <a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py"><code>stages/stage2_spark.py</code></a> and a single copied file will not run.</p>
 <p>In CloudShell, run <code>cat ~/a2.env</code> and copy the lines that start with <code>export</code>. Paste them into the Session Manager shell, so <code>$BUCKET</code> and <code>$INSTANCE_ID</code> mean the same thing there.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> dnf install <span class="at">-y</span> git</span>
@@ -4642,7 +4654,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <section id="stage-2a.-the-cluster-at-2-core-nodes" class="level1">
 <h1>Stage 2a. The cluster at 2 core nodes</h1>
 <p>⚙️ <strong>Data engineering:</strong> the same job on two cluster sizes, and what doubling the nodes does to each of its two phases.</p>
-<p><code>stages/stage2_spark.py</code> reads <code>matrix.parquet</code>, which Stage 1 wrote, and runs two phases against it.</p>
+<p><a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py"><code>stages/stage2_spark.py</code></a> reads <code>matrix.parquet</code>, which Stage 1 wrote, and runs two phases against it.</p>
 <p>Spark runs a job as one <em>driver</em>, the process that plans the work, and some number of <em>executors</em>, the processes that do it, one or more per node in the cluster. It splits the data into <em>partitions</em>, chunks of rows, and hands partitions out to executors. A partition is worked on by one core.</p>
 <p>Phase <code>A_aggregate</code> sends a copy of the 265-row zone lookup, <code>zones.parquet</code>, to every executor (a <em>broadcast</em>, which is cheap because the lookup is a few hundred rows), joins it to <code>matrix.parquet</code>, then groups by pickup zone. The group-by is a wide dependency: every zone’s rows have to meet in one place before they can be aggregated, so every row first goes into the <em>shuffle</em> (an <code>Exchange</code> in L6’s plans), and only the rows meant for another node travel over the network. <code>shuffle_write_bytes</code> is what the shuffle costs. The job fixes the number of those places at 16 shuffle partitions, the same 16 at either node count and on either platform, and the stage after the shuffle has 16 pieces of work to hand out. The job turns off adaptive execution’s merging of small partitions (L6), so the 16 stay 16.</p>
 <p>Phase <code>B_fit</code> searches the grid: 12 combinations on 5 folds, 60 fits, each independent of the others. No join, no shuffle, one task per fit.</p>
@@ -4706,7 +4718,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <p>The cluster writes its logs to <code>s3://436c-a2-&lt;your CWL&gt;/a2/emr-logs/</code>, and every step reads <code>matrix.parquet</code>, which <a href="#stage-1">Stage 1</a> writes to the same bucket. The bucket and its data come from <a href="#bucket-and-data">Bucket and data</a> in Setup. Check both before you choose <strong>Create cluster</strong>: <code>aws s3 ls s3://436c-a2-&lt;your CWL&gt;/a2/</code> should list <code>raw/</code> and <code>matrix.parquet</code>. A cluster started without them bills from the moment it launches and can do nothing useful, and a step submitted without <code>matrix.parquet</code> fails with <em>The given path is invalid</em>.</p>
 </div>
 </div>
-<p>Build the cluster in the EMR console: 1 primary and 2 core <code>m7g.xlarge</code>, release <code>emr-spark-8.0.0</code>, Spark, the idle termination setting left on, and your CWL in the cluster name. Before you leave the cluster page, export its definition as a CLI command and save it as <code>launch-cluster.sh</code>. If the cluster terminates, that command rebuilds it exactly. The settings, the export, and the fallback are in the commands (see 📋 below). Every command from here to the end of the assignment runs in CloudShell.</p>
+<p>Build the cluster in the EMR console: 1 primary and 2 core <code>m7g.xlarge</code>, release <code>emr-spark-8.0.0</code>, Spark, the idle termination setting left on, and your CWL in the cluster name. Before you leave the cluster page, export its definition as a CLI command and save it as <code>launch-cluster.sh</code>. If the cluster terminates, that command rebuilds it exactly. The settings, the export, and the fallback are in the 📋 block below. Every command from here to the end of the assignment runs in CloudShell.</p>
 <p><span id="launch-the-cluster"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Console steps and commands: Launch the cluster">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
@@ -4940,7 +4952,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <div class="callout-body-container callout-body">
 <ul>
 <li>Both phases should complete with <code>retried=0</code>, and <code>partitions</code> in the phase A block should read 16, as it did at 2 nodes.</li>
-<li>The step’s driver log should show 4 registered executors (the commands shows how to count them). Fewer means the run measured a smaller cluster: submit it again.</li>
+<li>The step’s driver log should show 4 registered executors (the 📋 commands above show how to count them). Fewer means the run measured a smaller cluster: submit it again.</li>
 </ul>
 </div>
 </div>
@@ -5035,7 +5047,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <section id="stage-3.-the-same-job-on-glue" class="level1">
 <h1>Stage 3. The same job on Glue</h1>
 <p>⚙️ <strong>Data engineering:</strong> the same Spark job on a managed service, compared with the cluster on wall time, on the wait before the work starts, and on price.</p>
-<p>You do not edit a line of the code. <code>stages/stage2_spark.py</code> runs as a Glue job script exactly as it ran on EMR, because it takes its platform from an argument and reads its inputs from S3. Only the submission changes, so submit it with the arguments your graded EMR runs used, and leave the optional detour’s <code>--shuffle-partitions</code> behind.</p>
+<p>You do not edit a line of the code. <a href="https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py"><code>stages/stage2_spark.py</code></a> runs as a Glue job script exactly as it ran on EMR, because it takes its platform from an argument and reads its inputs from S3. Only the submission changes, so submit it with the arguments your graded EMR runs used, and leave the optional detour’s <code>--shuffle-partitions</code> behind.</p>
 <p>Configure the job with Glue version 6.0, worker type <code>G.1X</code> (4 vCPU and 16 GB, the same size as one <code>m7g.xlarge</code>), 3 workers, and <strong>autoscaling switched off</strong>. With autoscaling on the worker count is not the constant it appears to be, and the comparison is worthless. One difference comes with the platform: Glue’s workers run on x86 processors, while your EMR nodes are Graviton, so the processor changes along with everything else.</p>
 <p>Three workers, not two, because Glue counts the driver among its workers and EMR does not. 3 <code>G.1X</code> workers is 1 driver plus 2 executors, matching the 1 primary plus 2 core nodes you measured. That is an assumption rather than something the console tells you, so state it and check it against <code>effective_parallelism</code> in the <code>B_fit</code> block.</p>
 <section id="predict-1" class="level2">
@@ -5088,6 +5100,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--query</span> <span class="st">&#39;JobRunId&#39;</span> <span class="at">--output</span> text<span class="va">)</span></span>
 <span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a><span class="ex">save</span> JOB_RUN_ID <span class="st">&quot;</span><span class="va">$JOB_RUN_ID</span><span class="st">&quot;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The script’s own flags travel as Glue job arguments, which is why they keep their <code>--</code> prefixes here. Glue injects arguments of its own, <code>--JOB_NAME</code> among them, and the script ignores anything it does not recognise.</p>
+<p>A run that reports <code>FAILED</code> within seconds, with an error saying the role “should be given assume role permissions for Glue Service”, started before the new role had spread through IAM, which takes up to a minute after <code>create-role</code>. Nothing is wrong with the role: wait a minute and start the run again.</p>
 <p>Starting a second run the moment the first reports <code>SUCCEEDED</code> gets you <code>ConcurrentRunsExceededException</code>. The state flips before the run’s slot is released, and this job is created with queuing off, so the new run is rejected rather than held. Wait about a minute and start it again.</p>
 <p>Read the timings off the run record.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb39"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> glue get-job-run <span class="at">--job-name</span> <span class="va">$CWL</span>-a2-stage3 <span class="at">--run-id</span> <span class="va">$JOB_RUN_ID</span> <span class="at">--region</span> ca-central-1 <span class="dt">\</span></span>
@@ -5248,7 +5261,7 @@ text-transform:uppercase; padding:.1rem .4rem; border-radius:3px; white-space:no
 <p><code>rubric={mechanics:5}</code></p>
 <section id="shut-down-first" class="level2">
 <h2 class="anchored" data-anchor-id="shut-down-first">Shut down first</h2>
-<p>Check first that <code>results.csv</code> and your three screenshots are on your laptop. The Stage 1 instance goes away with its disk, and nothing in this list can be undone. Then, with the commands in the job aid (see 📋 below):</p>
+<p>Check first that <code>results.csv</code> and your three screenshots are on your laptop. The Stage 1 instance goes away with its disk, and nothing in this list can be undone. Then, with the commands in the 📋 block below:</p>
 <ol type="1">
 <li>Terminate the EMR cluster and confirm the state change on the cluster list.</li>
 <li>Terminate the Stage 1 instance. Glue leaves nothing running between job runs.</li>

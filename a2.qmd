@@ -93,7 +93,7 @@ prediction written before its run, `results.csv` with its 7 rows, and 3 screensh
 `rubric={correctness:10}`
 
 - Create every resource in region `ca-central-1`. Accept the default network settings, and accept
-  the defaults everywhere else unless this page or the commands tells you otherwise.
+  the defaults everywhere else unless this page tells you otherwise.
 - Your CWL goes in the name of every resource you create: bucket, instance, cluster, Glue job.
 - The starter cluster config terminates itself when idle. Do not remove that setting.
 - Discuss the approach freely. Your measurements and your answers come from your own account.
@@ -104,6 +104,17 @@ command from the console or the CLI: you *need* to confirm both the result in th
 the spend on your budget, which refreshes from billing about once a day. If you leave a 4-core cluster overnight, it will cost you about $12
 and eat a large chunk of your course budget.
 :::
+
+## The code you run {#code}
+
+Everything you run is in the starter repository. Each file opens on GitHub, so you can
+read it before you run it:
+
+- [`stages/stage1_duckdb.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py): runs Stage 1, DuckDB reading the trip files from S3 and writing the model matrix
+- [`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py): the one Spark job behind Stages 2a, 2b and 3, on EMR and on Glue
+- [`stages/parse_run_log.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py): turns a run's metrics blocks into `results.csv` rows
+- [`harness/run_local.sh`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/harness/run_local.sh): the whole pipeline offline on synthetic data, no AWS
+- [`results.csv`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/results.csv): the header you fill in, one row per stage and phase
 
 ## Your shells and variables {#variables}
 
@@ -217,7 +228,7 @@ instance profile does not exist. Wait, then run it again.
 A general (simplified!) rule: instances and services get roles, people get accounts with logins. If you need to
 assign some permissions to an EC2 instance, an EMR cluster or Glue, you need to create a role
 allowing them to do something on your behalf. Remember that in A1 we created instance and execution
-roles; here in A2 we use the default EMR service roles and create a Glue role following the commands,
+roles; here in A2 we use the default EMR service roles and create a Glue role following the 📋 commands in Stage 3,
 and in Stage 3 you will create one custom yourself. Every time you see an "access denied" type of
 error, you need to check for a missing role, or a permission you need to add.
 :::
@@ -301,14 +312,14 @@ ca-central-1, not from the billing console.
 
 The order of work within a row is fixed. Write that row's `predicted_s` from the prediction block
 first, before you launch anything. Then run the stage, tee its
-output to a log file, and hand the log to `stages/parse_run_log.py`, which prints the measured row to
+output to a log file, and hand the log to [`stages/parse_run_log.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py), which prints the measured row to
 the shell with `predicted_s` empty by design. Copy the measured values into the row you already
 wrote, or paste the printed row in and type your prediction back into it. The parser never produces
 `predicted_s`. That number is yours, and the notebook cell you wrote it in is what dates it.
 
 Before you parse a log, glance at [Did the run work?](#did-the-run-work) below:
 four lines that tell you whether the run is worth reading at all. For a free pre-flight,
-`harness/run_local.sh` runs the same pipeline offline on synthetic data.
+[`harness/run_local.sh`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/harness/run_local.sh) runs the same pipeline offline on synthetic data.
 
 []{#did-the-run-work}
 
@@ -337,7 +348,7 @@ block reads `mode=duckdb` and has no retry or shuffle keys.
 ⚙️ **Data engineering:** what one instance costs in time to read a large Parquet dataset out of
 S3, and how much of each file it has to move to do it.
 
-`stages/stage1_duckdb.py` points DuckDB at the raw trip files in S3. It filters to the study window,
+[`stages/stage1_duckdb.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py) points DuckDB at the raw trip files in S3. It filters to the study window,
 January 2022 through March 2025, and to valid records, keeps the 6 columns the model needs out of
 the 19 each file carries (20 in the 2025 files), and writes the result back to S3 as
 `matrix.parquet`, the model matrix Stage 2a reads. It runs on one EC2
@@ -413,8 +424,8 @@ from the console instead, pick the 64-bit (Arm) architecture for the same reason
 Connect from the EC2 console: select the instance, choose Connect, then the Session Manager tab.
 There is no key pair and no inbound SSH rule anywhere in this assignment. The session opens in
 `/usr/bin`, a folder you cannot write to, so the first line below moves to your home folder. Then
-clone the repo and work from its root, because `stages/stage1_duckdb.py` imports a helper out of
-`stages/stage2_spark.py` and a single copied file will not run.
+clone the repo and work from its root, because [`stages/stage1_duckdb.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py) imports a helper out of
+[`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py) and a single copied file will not run.
 
 In CloudShell, run `cat ~/a2.env` and copy the lines that start with `export`. Paste them into the
 Session Manager shell, so `$BUCKET` and `$INSTANCE_ID` mean the same thing there.
@@ -509,7 +520,7 @@ little next to it.
 ⚙️ **Data engineering:** the same job on two cluster sizes, and what doubling the nodes does to
 each of its two phases.
 
-`stages/stage2_spark.py` reads `matrix.parquet`, which Stage 1 wrote, and runs two phases against
+[`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py) reads `matrix.parquet`, which Stage 1 wrote, and runs two phases against
 it.
 
 Spark runs a job as one *driver*, the process that plans the work, and some number of *executors*,
@@ -590,7 +601,7 @@ Build the cluster in the EMR console: 1 primary and 2 core `m7g.xlarge`, release
 Spark, the idle termination setting left on, and your CWL in the cluster name. Before you leave the
 cluster page, export its definition as a CLI command and save it as `launch-cluster.sh`. If the
 cluster terminates, that command rebuilds it exactly. The settings, the export, and the fallback
-are in the commands (see 📋 below). Every command from here to the end of the assignment runs in
+are in the 📋 block below. Every command from here to the end of the assignment runs in
 CloudShell.
 
 []{#launch-the-cluster}
@@ -826,7 +837,7 @@ Both runs carry the same `resource_id`, because both ran on the one cluster.
 ::: {.callout-tip icon=false title="👀 Quick check"}
 - Both phases should complete with `retried=0`, and `partitions` in the phase A block should read
   16, as it did at 2 nodes.
-- The step's driver log should show 4 registered executors (the commands shows how to count them).
+- The step's driver log should show 4 registered executors (the 📋 commands above show how to count them).
   Fewer means the run measured a smaller cluster: submit it again.
 :::
 
@@ -903,7 +914,7 @@ script's default, and every comparison in the assignment depends on that.
 ⚙️ **Data engineering:** the same Spark job on a managed service, compared with the cluster on wall
 time, on the wait before the work starts, and on price.
 
-You do not edit a line of the code. `stages/stage2_spark.py` runs as a Glue job script exactly as it
+You do not edit a line of the code. [`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py) runs as a Glue job script exactly as it
 ran on EMR, because it takes its platform from an argument and reads its inputs from S3. Only the
 submission changes, so submit it with the arguments your graded EMR runs used, and leave the
 optional detour's `--shuffle-partitions` behind.
@@ -987,6 +998,11 @@ save JOB_RUN_ID "$JOB_RUN_ID"
 The script's own flags travel as Glue job arguments, which is why they keep their `--` prefixes
 here. Glue injects arguments of its own, `--JOB_NAME` among them, and the script ignores anything it
 does not recognise.
+
+A run that reports `FAILED` within seconds, with an error saying the role "should be given assume
+role permissions for Glue Service", started before the new role had spread through IAM, which takes
+up to a minute after `create-role`. Nothing is wrong with the role: wait a minute and start the run
+again.
 
 Starting a second run the moment the first reports `SUCCEEDED` gets you
 `ConcurrentRunsExceededException`. The state flips before the run's slot is released, and this job
@@ -1137,8 +1153,8 @@ a different platform first. One paragraph, with the number in it.
 ## Shut down first
 
 Check first that `results.csv` and your three screenshots are on your laptop. The Stage 1 instance
-goes away with its disk, and nothing in this list can be undone. Then, with the commands in the job
-aid (see 📋 below):
+goes away with its disk, and nothing in this list can be undone. Then, with the commands in the 📋 block
+below:
 
 1. Terminate the EMR cluster and confirm the state change on the cluster list.
 2. Terminate the Stage 1 instance. Glue leaves nothing running between job runs.
