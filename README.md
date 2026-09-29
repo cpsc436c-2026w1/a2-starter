@@ -7,8 +7,7 @@ and the released version is the one that counts.
 
 | File | What it is |
 |---|---|
-| `a2.qmd` | the assignment, source; `docs/a2.html` is the rendered page |
-| `job-aid.md` | every command the assignment asks for, in order; `docs/job-aid.html` rendered |
+| `a2.qmd` | the assignment with every command in it, source; `docs/a2.html` is the rendered page |
 | `stages/stage1_duckdb.py` | Stage 1: scan, filter, project to the model matrix |
 | `stages/stage2_spark.py` | Stages 2a, 2b and 3: the Spark job, submitted to EMR and to Glue unchanged |
 | `stages/parse_run_log.py` | turns a run's log into a `results.csv` row |
