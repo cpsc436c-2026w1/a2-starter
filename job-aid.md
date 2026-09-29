@@ -18,17 +18,16 @@ Region is `ca-central-1` in every command. Replace the capitalised placeholders 
 | `INSTANCE_PROFILE` | `CWL-a2-role`, the instance profile you create under [Once per account](#once-per-account) |
 | `SUBNET` | the subnet id you read in [Once per account](#once-per-account). If your account has a default virtual private cloud (VPC, the network your instances are connected to), you can leave `--subnet-id` and `--ec2-attributes SubnetId=` off every command below |
 | `GLUE_ROLE` | the account's Glue service role |
-| `INSTANCE_ID` | the `i-...` id of the Stage 1 machine |
+| `INSTANCE_ID` | the `i-...` id of the Stage 1 instance |
 | `CLUSTER_ID` | the `j-...` id returned by `create-cluster` |
 | `STEP_ID` | the `s-...` id of a submitted step |
 | `IG_ID` | the `ig-...` id of the cluster's CORE instance group |
 | `JOB_RUN_ID` | the `jr_...` id returned by `start-job-run` |
 | `LAUNCH_S` | the EMR launch seconds: the create call to the cluster reaching `WAITING` |
 | `STARTUP_S` | Glue's start-up seconds, which you compute in Stage 3 |
-| `FIT_ROUNDS` | the grid's per-fit round count, published on the book page |
 
 The AWS CLI and your credentials are all these commands need. `uv` is not preinstalled on any of
-it. Once per machine:
+it. Install it once in each shell that needs it:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh && source "$HOME/.local/bin/env"
@@ -36,18 +35,20 @@ curl -LsSf https://astral.sh/uv/install.sh | sh && source "$HOME/.local/bin/env"
 
 ## Where each command runs
 
-Two shells, plus your own laptop. CloudShell is a terminal in the AWS console, in your browser: it
-already has the CLI and your credentials, and it runs every command in this file except the Stage 1
-job itself. That one runs on the Stage 1 instance, in a shell you open from the EC2 console by
-selecting the instance, choosing Connect, and taking the Session Manager tab. Your laptop runs no
-AWS command here, and it is where `results.csv` and your screenshots live.
+Two shells, the EMR console once, and your own laptop. CloudShell is a terminal in the AWS
+console, in your browser: it already has the CLI and your credentials, and it runs every command in
+this file except the Stage 1 job itself. That one runs on the Stage 1 instance, in a shell you open
+from the EC2 console by selecting the instance, choosing Connect, and taking the Session Manager
+tab. The cluster you create once in the EMR console, then keep its CLI export in CloudShell. Your
+laptop runs no AWS command here, and it is where `results.csv` and your screenshots live.
 
 | Commands | Shell | What has to stay running |
 |---|---|---|
 | [Once per account](#once-per-account), [Get the data](#get-the-data) | CloudShell | the tab, until the fetch loop finishes. CloudShell's home directory survives closing it |
 | `run-instances` in [Stage 1 on one EC2 instance](#stage-1-on-one-ec2-instance) | CloudShell | nothing |
 | the Stage 1 run itself, and its parse | Session Manager on the Stage 1 instance | the tab, for the length of the run. Anything written to that disk dies when you terminate the instance |
-| [Launch the cluster](#launch-the-cluster) through [Stage 3 on Glue](#stage-3-on-glue), and [Shut down and verify](#shut-down-and-verify) | CloudShell | nothing in the shell. The cluster and the Glue job run on AWS whether the tab is open or not |
+| creating the cluster in [Launch the cluster](#launch-the-cluster) | the EMR console, in your browser | nothing. Its **AWS CLI export** goes into `launch-cluster.sh` in CloudShell |
+| the rest of [Launch the cluster](#launch-the-cluster) through [Stage 3 on Glue](#stage-3-on-glue), and [Shut down and verify](#shut-down-and-verify) | CloudShell | nothing in the shell. The cluster and the Glue job run on AWS whether the tab is open or not |
 | `results.csv` and the three screenshots | your laptop | they stay on your laptop from the first row you write to the moment you submit |
 
 ## Did the run work?
@@ -58,7 +59,10 @@ comparable to your others, and re-running is the only fix.
 - **The block arrived.** `grep -c '===A2-METRICS' YOUR.log` prints 1 for Stage 1 and 2 for Stages 2a, 2b
   and 3. A 0 means the script stopped early, and the reason sits above where the block should
   have been.
-- **`mode=rest`** in every block, with `rest_target` naming the host the metrics reader reached. A
+The first check applies to every run. The other three apply to the Spark runs only: Stage 1's
+block reads `mode=duckdb` and has no retry or shuffle keys.
+
+- **`mode=rest`** in every Stage 2 and Stage 3 block, with `rest_target` naming the host the metrics reader reached. A
   cluster or Glue run that exits 3 reached no Spark REST endpoint and measured nothing. That is a
   failed run, not a slow one.
 - **`retried=0`.** A 1 means a stage or task was retried, so the timings are not comparable: rerun.
@@ -111,7 +115,7 @@ error. Meanwhile you can do everything up to the launch step (the data fetch and
 do not need an instance).
 :::
 
-A2's Stage 1 machine needs its own role, and A1's will not do: A1's is scoped to the a1 bucket and
+A2's Stage 1 instance needs its own role, and A1's will not do: A1's is scoped to the a1 bucket and
 carries no Session Manager permission. Build the new one the way A1 built its role, create first and
 permissions after, then wrap it in an instance profile, which is the object EC2 actually accepts.
 
@@ -202,10 +206,10 @@ aws ec2 run-instances --region ca-central-1 \
   --query 'Instances[0].InstanceId' --output text
 ```
 
-The root volume is sized at 60 GiB because the raw trip files pass through this box on their way
-to S3, on top of the Python toolchain the run installs, and the AL2023 default of 8 GiB does not
-leave room for both. `/dev/xvda` is AL2023's root device name. The image name ends in `arm64` because
-an `m7g.xlarge` is a Graviton (ARM) machine, and an `x86_64` image does not boot on it. If you launch
+The root volume is sized at 60 GiB because the AL2023 default of 8 GiB leaves little room once the
+Python toolchain and its packages are installed. The raw files never touch this disk: DuckDB reads
+them from S3 and writes its result back there. `/dev/xvda` is AL2023's root device name. The image name ends in `arm64` because
+an `m7g.xlarge` is a Graviton (ARM) instance, and an `x86_64` image does not boot on it. If you launch
 from the console instead, pick the 64-bit (Arm) architecture for the same reason.
 
 Connect from the EC2 console: select the instance, choose Connect, then the Session Manager tab.
@@ -238,7 +242,7 @@ the system Python, which on Amazon Linux 2023 is 3.9. `pyspark`, `numpy`, and `p
 for one import at the top of the script and run none of the query.
 
 If the run stops on a `Secret Validation Failure` before it prints anything, the instance has no
-credentials to sign the S3 reads with: the instance profile is missing from the machine, so attach
+credentials to sign the S3 reads with: the instance profile is missing from the instance, so attach
 `INSTANCE_PROFILE` to the instance and run it again.
 
 Turn the log into a `results.csv` row. Confirm the metrics block arrived first: `grep -c
@@ -317,13 +321,18 @@ the cluster's timeline if you would rather read them there.
 
 ## Submit the job as a step
 
-Upload the job script once. Every later run reads this same object, on both platforms.
+CloudShell needs its own copy of the starter repo: the clone you made in Stage 1 lived on the
+instance. Clone it here once, then upload the job script. Every later run reads this same object,
+on both platforms.
 
 ```bash
+cd ~
+[ -d a2-starter ] || git clone https://github.com/cpsc436c-2026w1/a2-starter.git
+cd ~/a2-starter
 aws s3 cp stages/stage2_spark.py s3://BUCKET/a2/stages/stage2_spark.py --region ca-central-1
 ```
 
-Submit it as a step. `FIT_ROUNDS` comes from the book page. `--deploy-mode client` keeps the driver
+Submit it as a step. `--deploy-mode client` keeps the driver
 on the primary node, which is what puts its stdout in the step's own log. The step passes no
 partition argument, so the job runs at its own default of 16 shuffle partitions and prints that back
 as `shuffle_partitions` in every metrics block. Both graded runs use the default, and so does
@@ -331,7 +340,7 @@ Stage 3.
 
 ```bash
 aws emr add-steps --cluster-id CLUSTER_ID --region ca-central-1 \
-  --steps 'Type=Spark,Name=a2-stage2-2n,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://BUCKET/a2/stages/stage2_spark.py,--trips,s3://BUCKET/a2/matrix.parquet,--zones,s3://BUCKET/a2/raw/zones.parquet,--out,s3://BUCKET/a2/stage2-2n,--platform,emr,--fit-rounds,FIT_ROUNDS]' \
+  --steps 'Type=Spark,Name=a2-stage2-2n,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://BUCKET/a2/stages/stage2_spark.py,--trips,s3://BUCKET/a2/matrix.parquet,--zones,s3://BUCKET/a2/raw/zones.parquet,--out,s3://BUCKET/a2/stage2-2n,--platform,emr,--fit-rounds,50]' \
   --query 'StepIds[0]' --output text
 ```
 
@@ -379,31 +388,35 @@ aws emr modify-instance-groups --region ca-central-1 \
 Re-run the same `describe-cluster` call until `Running` reads 4 and the group's state is
 `RUNNING`. Submitting before then measures a 3-node cluster and quietly ruins the comparison.
 
-Then wait about two more minutes before you submit. The instance group reports the machines as
+Then wait about two more minutes before you submit. The instance group reports the new nodes as
 running some way before Spark has an executor on each of them, and a step that starts early runs
 part of phase A on half the cluster you are paying for.
 
-The step's driver log settles it after the fact. The driver prints one `Registered executor` line
-per executor, and all four have to arrive before the first stage is submitted. Fewer than four means
-the wait was too short and the 4-node run is not comparable to the 2-node one. That log is
-`stderr.gz`, beside the `stdout.gz` you pull the metrics blocks from.
-
-```bash
-aws s3 cp s3://BUCKET/a2/emr-logs/CLUSTER_ID/steps/STEP_ID/stderr.gz - --region ca-central-1 \
-  | gunzip | grep -c 'Registered executor'      # 4
-```
-
-Then submit the identical step with a new output prefix.
+Then submit the identical step with a new output prefix, and note the new `STEP_ID` it prints.
 
 ```bash
 aws emr add-steps --cluster-id CLUSTER_ID --region ca-central-1 \
-  --steps 'Type=Spark,Name=a2-stage2-4n,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://BUCKET/a2/stages/stage2_spark.py,--trips,s3://BUCKET/a2/matrix.parquet,--zones,s3://BUCKET/a2/raw/zones.parquet,--out,s3://BUCKET/a2/stage2-4n,--platform,emr,--fit-rounds,FIT_ROUNDS]' \
+  --steps 'Type=Spark,Name=a2-stage2-4n,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://BUCKET/a2/stages/stage2_spark.py,--trips,s3://BUCKET/a2/matrix.parquet,--zones,s3://BUCKET/a2/raw/zones.parquet,--out,s3://BUCKET/a2/stage2-4n,--platform,emr,--fit-rounds,50]' \
   --query 'StepIds[0]' --output text
 ```
+
+Watch it with the same `describe-step` call as the 2-node run, using the new `STEP_ID`, until it
+reports `COMPLETED`. Then pull its log, which arrives a few minutes after the step ends.
 
 ```bash
 aws s3 cp s3://BUCKET/a2/emr-logs/CLUSTER_ID/steps/STEP_ID/stdout.gz - --region ca-central-1 \
   | gunzip > stage2-4n.log
+grep -c '===A2-METRICS' stage2-4n.log      # 2
+```
+
+Before you parse it, check that the run had all four nodes. The step's driver log prints one
+`Registered executor` line per executor, and all four have to arrive before the first stage is
+submitted. Fewer than four means the wait was too short and the 4-node run is not comparable to the
+2-node one: submit the step again. That log is `stderr.gz`, beside the `stdout.gz` you just pulled.
+
+```bash
+aws s3 cp s3://BUCKET/a2/emr-logs/CLUSTER_ID/steps/STEP_ID/stderr.gz - --region ca-central-1 \
+  | gunzip | grep -c 'Registered executor'      # 4
 python3 stages/parse_run_log.py stage2-4n.log --resource-id CLUSTER_ID --nodes 4
 ```
 
@@ -417,7 +430,7 @@ one run only: every graded run and the Glue run leave it off.
 
 ```bash
 aws emr add-steps --cluster-id CLUSTER_ID --region ca-central-1 \
-  --steps 'Type=Spark,Name=a2-stage2-4n-p8,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://BUCKET/a2/stages/stage2_spark.py,--trips,s3://BUCKET/a2/matrix.parquet,--zones,s3://BUCKET/a2/raw/zones.parquet,--out,s3://BUCKET/a2/stage2-4n-p8,--platform,emr,--fit-rounds,FIT_ROUNDS,--shuffle-partitions,8]' \
+  --steps 'Type=Spark,Name=a2-stage2-4n-p8,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://BUCKET/a2/stages/stage2_spark.py,--trips,s3://BUCKET/a2/matrix.parquet,--zones,s3://BUCKET/a2/raw/zones.parquet,--out,s3://BUCKET/a2/stage2-4n-p8,--platform,emr,--fit-rounds,50,--shuffle-partitions,8]' \
   --query 'StepIds[0]' --output text
 ```
 
@@ -467,7 +480,7 @@ driver's REST endpoint alive, which is where the script reads its metrics from.
 ```bash
 aws glue start-job-run --region ca-central-1 \
   --job-name CWL-a2-stage3 \
-  --arguments '{"--trips":"s3://BUCKET/a2/matrix.parquet","--zones":"s3://BUCKET/a2/raw/zones.parquet","--out":"s3://BUCKET/a2/stage3","--platform":"glue","--fit-rounds":"FIT_ROUNDS"}' \
+  --arguments '{"--trips":"s3://BUCKET/a2/matrix.parquet","--zones":"s3://BUCKET/a2/raw/zones.parquet","--out":"s3://BUCKET/a2/stage3","--platform":"glue","--fit-rounds":"50"}' \
   --query 'JobRunId' --output text
 ```
 

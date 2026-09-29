@@ -21,19 +21,19 @@ steps, in this order:
 1. **Filter and trim the trip files.** Keep only the months in the study window and the valid trips,
    and only the columns the model needs. Most of every file is thrown away.
 2. **Build one row per pickup zone.** Join the trips to the zone lookup, then group by zone.
-3. **Try a grid of model settings and keep the best.** Each setting is checked on 5 folds, held-out
+3. **Try a grid of model settings and score each one.** Each setting is checked on 5 folds, held-out
    slices of the data, and every fit is independent of the others.
 
-You will run these steps on a single machine with DuckDB, then on a Spark cluster on EMR at two
+You will run these steps on a single EC2 instance with DuckDB, then on a Spark cluster on EMR at two
 sizes, then on Glue, and compare what each cost. At each step you will be given hints about the size
 of the data, which you need to verify against the data itself. We will ask you to estimate the
 resources and time each step needs, and to compare your estimates with the real numbers you get as
 you go.
 
 DuckDB is a query engine that runs inside a single process and reads Parquet straight out of S3. You
-launched the kind of EC2 machine it runs on in A1, and the engine is the new part. Amazon EMR gives
+launched the kind of EC2 instance it runs on in A1, and the engine is the new part. Amazon EMR gives
 you a Spark cluster you can see, size, and resize. AWS Glue takes the same Spark job and runs it
-without showing you a machine at all.
+without showing you an instance at all.
 
 Your numbers will not be the lecture's numbers, and two of you running the same stage an hour apart
 will not agree to the second. Track your own number, compare orders of magnitude, and say why yours
@@ -50,7 +50,7 @@ landed where it did.
      |   STAGE 2b  the same cluster, resized to 4.
      |            phase A: join and group by pickup zone. phase B: 60 model fits.
      v
-  zone features + grid scores in S3
+  zone features in S3
      |   STAGE 3  the same job file, submitted to Glue instead
      v
   the same outputs, produced somewhere else
@@ -69,14 +69,14 @@ then compare it with the measurement. Learning to do these comparisons is how yo
 engineering intuition. You don't get downgraded for wrong predictions.
 
 ::: {.callout-note icon=false title="🗺️ Shape of the work"}
-Work in stage order, because each stage reads what the stage before it wrote. Setup comes first: the
+Work in stage order: every Spark run reads `matrix.parquet`, which Stage 1 writes, and Stage 3 is compared against your Stage 2a and 2b numbers. Setup comes first: the
 roles, the bucket, and the data fetch, which runs for a few minutes on its own while you read ahead.
 Stage 1 then writes `matrix.parquet`, and nothing in Stages 2a, 2b or 3 can run until that file
 exists.
 
 Stages 2a and 2b run on one cluster, which you launch at 2 core nodes and then resize in place to
 4. Two waits there are normal, and neither means anything is wrong: the
-cluster takes minutes to reach `WAITING` after the create call, and after a resize the new machines
+cluster takes minutes to reach `WAITING` after the create call, and after a resize the new nodes
 report as running some way before Spark has an executor on each of them. Stage 3 reuses your Stage 2a and 2b
 measurements as its comparison, so run it after both cluster runs.
 
@@ -105,14 +105,14 @@ and eat a large chunk of your course budget.
 ## Roles
 
 Three things happen once per account, before anything else: EMR gets the service roles it will not
-launch without, your bucket gets created, and the Stage 1 machine gets a role of its own. They are
+launch without, your bucket gets created, and the Stage 1 instance gets a role of its own. They are
 one block in the job aid, and it is the first block you run (see 📋 below). A1's role does not
 carry over, because it is scoped to the a1 bucket.
 
 📋 **Commands:** [Once per account](job-aid.md#once-per-account)
 
 ::: {.callout-tip icon=false title="💡 Why a role and not a login"}
-A general (simplified!) rule: machines get roles, people get accounts with logins. If you need to
+A general (simplified!) rule: instances and services get roles, people get accounts with logins. If you need to
 assign some permissions to an EC2 instance, an EMR cluster or Glue, you need to create a role
 allowing them to do something on your behalf. Remember that in A1 we created instance and execution
 roles; here in A2 we use the default EMR service roles and create a Glue role following the job aid,
@@ -158,15 +158,16 @@ four lines that tell you whether the run is worth reading at all. For a free pre
 
 # Stage 1. DuckDB on one EC2 instance {#stage-1}
 
-⚙️ **Data engineering:** what one machine costs in time to read a large Parquet dataset out of
+⚙️ **Data engineering:** what one instance costs in time to read a large Parquet dataset out of
 S3, and how much of each file it has to move to do it.
 
 `stages/stage1_duckdb.py` points DuckDB at the raw trip files in S3. It filters to the study window,
 January 2022 through March 2025, and to valid records, keeps the 6 columns the model needs out of
 the 19 each file carries (20 in the 2025 files), and writes the result back to S3 as
 `matrix.parquet`, the model matrix Stage 2a reads. It runs on one EC2
-instance, an `m7g.xlarge` with 4 vCPU, with no cluster involved, and makes one pass: read rows, drop most of them, write what is
-left. The supplied stage runs in one DuckDB process. The files could be split across machines, but
+instance, an `m7g.xlarge` with 4 vCPU, with no cluster involved, and times one pass: read rows, drop most of them, write what is
+left. Before that pass it reads the same columns once without writing, so that `t_read_s` prices
+the read on its own. The supplied stage runs in one DuckDB process. The files could be split across several instances, but
 that needs a distributed engine and the coordination L5 showed. That is what Stage 2a changes, and
 it is where the vocabulary for it arrives.
 
@@ -230,7 +231,7 @@ must equal `resource_id` in your Stage 1 row.
   size. If it comes back at zero, or equal to `bytes_on_disk`, the run did not work: run it again.
 - The rate you achieved should land well below the advertised 12.5 Gb/s. If yours lands above it,
   check your units: the metrics key is megabytes per second, the instance page gigabits per second.
-- The stage should finish in tens of seconds.
+- The timed pass, `wall_s`, should take well under a minute.
 
 ::: {.callout-note collapse="true" icon=false title="Compare with our run, open after you have written your explanation"}
 In our runs almost all of Stage 1's wall time was the read. The filter and the write cost very
@@ -248,30 +249,31 @@ little next to it.
    the rest, and say why the saving stops where it does.
 3. The instance page advertises 12.5 Gb/s and you did not get it. What is that figure measuring, and
    why is it the wrong number to predict a sustained read with?
-4. You could have run this stage on 3 machines instead of 1, at roughly 3 times the hourly rate.
-   What would that have bought here, and what would the work need to look like for extra machines to
+4. You could have run this stage on 3 instances instead of 1, at roughly 3 times the hourly rate.
+   What would that have bought here, and what would the work need to look like for extra instances to
    help?
 
 # Stage 2a. The cluster at 2 core nodes
 
-⚙️ **Data engineering:** the same job on two cluster sizes, and what doubling the machines does to
+⚙️ **Data engineering:** the same job on two cluster sizes, and what doubling the nodes does to
 each of its two phases.
 
 `stages/stage2_spark.py` reads `matrix.parquet`, which Stage 1 wrote, and runs two phases against
 it.
 
 Spark runs a job as one *driver*, the process that plans the work, and some number of *executors*,
-the processes that do it, one or more per machine in the cluster. It splits the data into
+the processes that do it, one or more per node in the cluster. It splits the data into
 *partitions*, chunks of rows, and hands partitions out to executors. A partition is worked on by one
 core.
 
 Phase `A_aggregate` sends a copy of the 265-row zone lookup, `zones.parquet`, to every executor (a
 *broadcast*, which is cheap because the lookup is a few hundred rows), joins it to
 `matrix.parquet`, then groups by pickup zone. The group-by is a wide dependency: every zone's rows have to meet in one place before
-they can be aggregated, so the rows move across the cluster first. That move is the *shuffle*, and
-`shuffle_write_bytes` is what it costs. The job fixes the number of those places at
+they can be aggregated, so every row first goes into the *shuffle* (an `Exchange` in L6's plans), and
+only the rows meant for another node travel over the network. `shuffle_write_bytes` is what the shuffle costs. The job fixes the number of those places at
 16 shuffle partitions, the same 16 at either node count and on either platform, and the
-stage after the shuffle has 16 pieces of work to hand out.
+stage after the shuffle has 16 pieces of work to hand out. The job turns off adaptive execution's
+merging of small partitions (L6), so the 16 stay 16.
 
 Phase `B_fit` searches the grid: 12 combinations on 5 folds, 60 fits, each independent of the
 others. No join, no shuffle, one task per fit.
@@ -298,13 +300,13 @@ time_A ≈ rows / (cores × rows_per_second_per_core)
   count only core-node cores. Write the core count you are predicting with.
 
 Phase A has 16 partitions to hand out and a partition is worked on by one core, so 8 cores work
-through them in two rounds and 16 cores in one. Say what that does to the formula above at each
+through them in two waves and 16 cores in one. Say what that does to the formula above at each
 node count.
 :::
 
 ::: {.callout-tip icon=false title="📐 Prediction 3, how long will phase B take?"}
 ```
-time_B ≈ fits × seconds_per_fit / min(cores, fits)
+time_B ≈ ceil(fits / cores) × seconds_per_fit
 ```
 
 - **Fits.** 60, from 12 combinations on 5 folds. The job prints it back as `fits_done`. Write it
@@ -313,8 +315,9 @@ time_B ≈ fits × seconds_per_fit / min(cores, fits)
   sentence of reasoning. After the 2-node run you replace it with a measured figure.
 - **Cores.** The same core count as in prediction 2.
 
-Phase B has 60 independent fits and no shuffle, so it splits across every core you give it. That
-is what the `min()` in the formula is for.
+Phase B has 60 independent fits and no shuffle. Each core runs one fit at a time, so the fits go in
+waves of as many fits as you have cores. `ceil` rounds up because a last, partly full wave still
+takes a whole fit's time (L6).
 :::
 
 Both predictions go into `results.csv` before you submit the step.
@@ -365,7 +368,6 @@ CWL in the name. The cluster ID must equal `resource_id` in your `2_emr` rows.
 :::: {.callout-tip icon=false title="👀 Quick check"}
 - Both phases should complete, and every metrics block should read `retried=0`, with `partitions`
   in the phase A block reading 16.
-- Both phases should finish in tens of seconds, against a cluster launch you timed in minutes.
 
 ::: {.callout-note collapse="true" icon=false title="Compare with our run, open after you have written your explanation in 2b.2"}
 In our runs phase A could not finish before its slowest partition did, so `task_max_s` was a large
@@ -392,11 +394,10 @@ cluster instead, record its `launch_s` separately.
 📋 **Commands:** [Resize and re-run](job-aid.md#resize-and-re-run)
 
 ::: {.callout-tip icon=false title="👀 Quick check"}
-- Phase B should get close to twice as fast.
-- Phase A should also get faster, but by noticeably less. If both phases moved by the same factor,
-  look at how many partitions phase A ran in.
-- Phase A's `shuffle_write_bytes` should be within a rounding error of the 2-node figure. The extra
-  nodes changed where the work ran, not how much of it there was.
+- Both phases should complete with `retried=0`, and `partitions` in the phase A block should read
+  16, as it did at 2 nodes.
+- The step's driver log should show 4 registered executors (the job aid shows how to count them).
+  Fewer means the run measured a smaller cluster: submit it again.
 :::
 
 ## 2b.2 Explain the gaps
@@ -415,8 +416,8 @@ Then answer:
 1. For each phase, is the 4-node run about the same speed as the 2-node run, about twice as fast, or
    somewhere else? Both phases ran on the same cluster, in the same run, over the same data, so name
    what differs: the dependency type in each phase, how many pieces of work it had to hand out, and
-   how many cores were waiting for one. Hint: L6's rounds and its four checks, read, move, divide,
-   wait.
+   how many cores were waiting for one. Hint: L6's waves and its checks for a slow stage: read, divide,
+   wait, move.
 2. Did doubling the cluster change how many bytes the shuffle moved? Say whether it should have,
    and why. Hint: L6, on what sets a shuffle's size.
 3. At 100 core nodes, what does each phase approach, and why does it stop there? Point at the
@@ -440,7 +441,8 @@ compare.
 This run may fail, and that is part of the exercise. With fewer partitions, each partition holds
 more rows, and 8 partitions of this data may not fit in a worker's memory. If you lose a worker, or
 the metrics block shows `retried=1`, write that down. What does it tell you about the partition
-count as a memory setting, and not only a speed setting?
+count as a memory setting, and not only a speed setting? Hint: L6, Problem 4 (spill), and the *Shuffle
+spill* fields on the stage page.
 
 ::: {.callout-warning icon=false title="⚠️ Use this flag for this one run only"}
 Use `--shuffle-partitions 8` for this one run only. All graded runs in Stages 2a, 2b and 3 use the
@@ -460,7 +462,7 @@ optional detour's `--shuffle-partitions` behind.
 Configure the job with Glue version 6.0, worker type `G.1X` (4 vCPU and 16 GB, the same size as one
 `m7g.xlarge`), 3 workers, and **autoscaling switched off**. With autoscaling on the worker count is
 not the constant it appears to be, and the comparison is worthless. One difference comes with the
-platform: Glue's workers run on x86 processors (the job's log reports `amd64`), while your EMR
+platform: Glue's workers run on x86 processors, while your EMR
 nodes are Graviton, so the processor changes along with everything else.
 
 Three workers, not two, because Glue counts the driver among its workers and EMR does not. 3 `G.1X`
@@ -494,7 +496,7 @@ times. The run ID must equal `resource_id` in your `3_glue` rows.
 ::: {.callout-tip icon=false title="👀 Quick check"}
 - Read the shuffle bytes and the partition count off both runs and put them side by side.
 - Wall times need not match EMR's. Glue 6.0 and `emr-spark-8.0.0` do not ship the same Spark build.
-- The wait before the work starts should be seconds here, where EMR's was minutes.
+- `startup_s` goes on both Stage 3 rows, separate from each phase's `wall_s`.
 :::
 
 ## 3.3 The identity check
@@ -510,9 +512,7 @@ times. The run ID must equal `resource_id` in your `3_glue` rows.
 | the wait before the work started | your `launch_s` | your `startup_s` | yes or no |
 
 Then answer two questions. Which rows stayed put, and are those numbers properties of the job, of
-the data, or of the machine it ran on? For the rows that did move, what about Glue moved them? A
-shifted partition count on Glue is a finding, not a mistake, because the two platforms do not ship
-the same Spark build.
+the data, or of the workers it ran on? For the rows that did move, what about Glue moved them?
 
 ## 3.4 The crossover
 
@@ -531,7 +531,7 @@ run makes.
 - **Work.** The job's own wall time, phase A plus phase B, from your 2-node EMR run. Write it in
   hours.
 - **Cluster rate.** The hourly rate for a 1-primary, 2-core `m7g.xlarge` cluster, from the price
-  sheet. The primary node is billed too, so write the rate for all three machines.
+  sheet. The primary node is billed too, so write the rate for all three nodes.
 - **Startup.** Your measured Glue `startup_s`, in hours.
 - **DPU rate.** The Glue per-DPU-hour rate for ca-central-1, times your DPU count. A DPU, or
   Data Processing Unit, is the unit Glue bills in, and `G.1X` bills 1 DPU per worker, so your 3
@@ -595,7 +595,7 @@ goes away with its disk, and nothing in this list can be undone. Then, with the 
 aid (see 📋 below):
 
 1. Terminate the EMR cluster and confirm the state change on the cluster list.
-2. Stop or terminate the Stage 1 instance. Glue leaves nothing running between job runs.
+2. Terminate the Stage 1 instance. Glue leaves nothing running between job runs.
 3. Check your budget the next morning, and again the morning after: **Billing and Cost Management
    → Budgets**, open the budget you made in A1, read **Amount spent**. In **Cost Explorer** you can also see the
    spend by service, and a live cluster shows up as EMR. A number still climbing on the second
@@ -613,7 +613,9 @@ aid (see 📋 below):
 - `results.csv` with 7 rows: 1 for Stage 1, 2 each for Stages 2a and 2b, 2 for Stage 3.
 - Screenshots 1 to 3, each showing an ID that appears in `results.csv`.
 
-Cover the last 4 digits of your account number. Never screenshot a key, a token, or a secret.
+Your account number should be visible in these screenshots: it is how we tell your work from
+anyone else's. Do not post them publicly or commit them to a public repository. Upload them to
+Canvas and nowhere else, and never submit a screenshot showing a key, a token, or a secret.
 
 # Rubric summary
 
@@ -626,7 +628,7 @@ Cover the last 4 digits of your account number. Never screenshot a key, a token,
 | Question 4: synthesis | 15 |
 | Mechanics and screenshots | 5 |
 
-Inside each stage the marks split 25% for the prediction, 25% for the measurement, and 50% for the
-explanation, and the `rubric={...}` tag on each subsection carries that split. The prediction marks
+Inside each stage, about a quarter of the marks go to the prediction, a quarter to the measurement,
+and half to the explanation. The `rubric={...}` tag on each subsection gives the exact split. The prediction marks
 buy a defended number, never a close one. A stage with no measurement cannot earn its explanation
 marks, because there is no gap to explain.
