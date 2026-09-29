@@ -11,7 +11,7 @@
     "href": "a2.html#code",
     "title": "A2 DRAFT: Spark and Glue: Exploring performance and cost",
     "section": "The code you run",
-    "text": "The code you run\nEverything you run is in the starter repository. Each file opens on GitHub, so you can read it before you run it:\n\nstages/stage1_duckdb.py: runs Stage 1, DuckDB reading the trip files from S3 and writing the model matrix\nstages/stage2_spark.py: the one Spark job behind Stages 2a, 2b and 3, on EMR and on Glue\nstages/parse_run_log.py: turns a run’s metrics blocks into results.csv rows\nharness/run_local.sh: the whole pipeline offline on synthetic data, no AWS\nresults.csv: the header you fill in, one row per stage and phase"
+    "text": "The code you run\nEverything you run is in the starter repository. Each file opens on GitHub, so you can read it before you run it:\n\nstages/stage1_duckdb.py: runs Stage 1, DuckDB reading the trip files from S3 and writing the model matrix\nstages/stage2_spark.py: the one Spark job behind Stages 2a, 2b and 3, on EMR and on Glue\nstages/parse_run_log.py: turns a run’s metrics blocks into results.csv rows\nharness/run_local.sh: the whole pipeline offline on synthetic data, no AWS\nresults.csv: the header you fill in, one row per stage and phase\n\nThe scripts above also time themselves and print metrics, which makes the work hard to see. Two shorter files hold only the work, the same queries and computation with the timing left out. They are for reading; the graded runs use the scripts above.\n\nworkload/stage1.sql: the query Stage 1 runs\nworkload/stage2.py: the Spark work of Stages 2a, 2b and 3, from the join to the 60 fits"
   },
   {
     "objectID": "a2.html#variables",

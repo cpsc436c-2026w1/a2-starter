@@ -116,6 +116,11 @@ read it before you run it:
 - [`harness/run_local.sh`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/harness/run_local.sh): the whole pipeline offline on synthetic data, no AWS
 - [`results.csv`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/results.csv): the header you fill in, one row per stage and phase
 
+The scripts above also time themselves and print metrics, which makes the work hard to see. Two shorter files hold only the work, the same queries and computation with the timing left out. They are for reading; the graded runs use the scripts above.
+
+- [`workload/stage1.sql`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/workload/stage1.sql): the query Stage 1 runs
+- [`workload/stage2.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/workload/stage2.py): the Spark work of Stages 2a, 2b and 3, from the join to the 60 fits
+
 ## Your shells and variables {#variables}
 
 Everything in this assignment runs in the AWS console, in your browser. There is no AWS command to
