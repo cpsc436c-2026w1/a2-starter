@@ -28,58 +28,52 @@ steps, in this order:
 3. **Try a grid of model settings and score each one.** Each setting is checked on 5 folds, held-out
    slices of the data, and every fit is independent of the others.
 
-You will run these steps on a single EC2 instance with DuckDB, then on a Spark cluster on EMR at two
-sizes, and compare what each cost. At each step you will be given hints about the size
-of the data, which you need to verify against the data itself. We will ask you to estimate the
-resources and time each step needs, and to compare your estimates with the real numbers you get as
-you go.
+You will run these steps on a single EC2 instance with DuckDB, then on a Spark cluster on EMR with 2 and then 4 core nodes, and compare the time and cost of each.
 
-DuckDB is a query engine that runs inside a single process and reads Parquet straight out of S3. You
-launched the kind of EC2 instance it runs on in A1, and the engine is the new part. Amazon EMR gives
-you a Spark cluster you can see, size, and resize.
+At each step you will be given hints about the size
+of the data, which you need to verify against the data itself. We will ask you to estimate the resources and time each step needs, and to compare your estimates with the real numbers you get as you go.
 
-Your numbers will not be the lecture's numbers, and two of you running the same stage an hour apart
-will not agree to the second. Track your own number, compare orders of magnitude, and say why yours
-landed where it did.
+[DuckDB](https://duckdb.org/) is a query engine that runs inside a single machine and reads Parquet straight out of S3. You launch the same type of EC2 instance we have in A1 and run DuckDB on it without a cluster. Then, you use Amazon EMR to create a Spark cluster, run jobs on it and change its size.
 
-# Roadmap
+On every stage, we ask you to predict, measure and explain what happens. 
 
+- **Predict** what will happen: give an estimate of performance or price before executing anything. 
+- **Measure** what actually happened: run
+the stage, and turn the metrics it prints into a row of `results.csv` with
+`stages/parse_run_log.py`. 
+- **Explain** the difference between your estimate and the measurement, and
+name the mechanism behind it, in the notebook, in 2 to 4 sentences.
+
+In predictions we ask for order-of-magnitude comparisons and don't ask for a precise estimate. As a rule of thumb, you should be able to do a back-of-the-envelope prediction looking at the numbers or their estimates, seldom needing code or GenAI. Write your prediction down before you launch the run, then compare it with the measurement. Learning to do these comparisons is how you build data engineering intuition. You don't get downgraded for wrong predictions.
+
+::: {.callout-note icon=false title="🗺️ Shape of the work"}
 ```
   39 monthly trip files, Parquet in S3, 19 columns
      |   STAGE 1  DuckDB on one EC2 instance (m7g.xlarge). Scan, filter, project.
      v
   matrix.parquet in S3   +   zones.parquet (265 rows)
      |   STAGE 2a  Spark on EMR at 2 core nodes.
+     v
      |   STAGE 2b  the same cluster, resized to 4.
      |            phase A: join and group by pickup zone. phase B: 60 model fits.
      v
   zone features in S3
 ```
 
-On every stage, we ask you to predict, measure and explain what happens. **Predict** what will happen: give an estimate of performance or price before executing anything. **Measure** what actually happened: run
-the stage, and turn the metrics it prints into a row of `results.csv` with
-`stages/parse_run_log.py`. **Explain** the difference between your estimate and the measurement, and
-name the mechanism behind it, in the notebook, in 2 to 4 sentences.
+Before both stages, you need to set up the environment:
+the roles, the bucket, and the data fetch, which runs for a few minutes on its own while you read ahead.
 
-In predictions we ask for order-of-magnitude comparisons and don't ask for a precise estimate. As a
-rule of thumb, you should be able to do a back-of-the-envelope prediction looking at the numbers or
-their estimates, seldom needing code or GenAI. Write your prediction down before you launch the run,
-then compare it with the measurement. Learning to do these comparisons is how you build data
-engineering intuition. You don't get downgraded for wrong predictions.
+Work in stage order: Stage 2 Spark runs will read `matrix.parquet` that DuckDB writes in Stage 1, so you will need `matrix.parquet` before creating clusters.
 
-::: {.callout-note icon=false title="🗺️ Shape of the work"}
-Work in stage order: every Spark run reads `matrix.parquet`, which Stage 1 writes. Setup comes first: the
-roles, the bucket, and the data fetch, which runs for a few minutes on its own while you read ahead.
-Stage 1 then writes `matrix.parquet`, and nothing in Stages 2a or 2b can run until that file
-exists.
+Stages 2a and 2b run on one cluster, which you launch at 2 core nodes and then resize in place to 4. 
 
-Stages 2a and 2b run on one cluster, which you launch at 2 core nodes and then resize in place to
-4. Two waits there are normal, and neither means anything is wrong: the
-cluster takes minutes to reach `WAITING` after the create call, and after a resize the new nodes
-report as running some way before Spark has an executor on each of them.
+The cluster takes minutes to reach `WAITING` after the create call, and after a resize the new nodes report as running some way before Spark has an executor on each of them.
 
-Question 4 needs no cloud at all. You answer it from `results.csv` and your own run logs, so it is the part
-to leave until after everything is terminated. What you hand in is the notebook with every
+Question 4 asks you to reflect on your results. 
+You answer it from `results.csv` and your own run logs, so it is the part
+to leave until after everything is terminated. 
+
+You will hand in the notebook with every
 prediction written before its run, `results.csv` with its 5 rows, and 2 screenshots.
 :::
 
@@ -300,23 +294,22 @@ aws s3 ls s3://$BUCKET/a2/raw/yellow_tripdata_ --summarize --human-readable --re
 
 ## The results file
 
-`results.csv` ships with the assignment, header only. Keep it on your laptop, from the first row you
-write to the moment you submit, and append one row per stage-phase there: five rows in all, one for
-Stage 1 and two each for Stages 2a and 2b. Nothing you run in the cloud writes to this file. The
-Stage 1 instance is terminated before you hand anything in, so a copy that lives only on it is a
-copy you lose.
+`results.csv` ships with the assignment, header only. Keep it **on your laptop**, and append one row per stage-phase there: five rows in all, one for
+Stage 1 and two each for Stages 2a and 2b. 
 
-Four of its columns need explaining. `resource_id` is the instance or cluster ID, and
-it has to match a screenshot. `predicted_s` is your prediction, entered **before** the run.
-`wall_s` and `startup_s` stay in separate columns. `cost_usd` comes from AWS's price pages for [EC2 on-demand instances](https://aws.amazon.com/ec2/pricing/on-demand/)
-and [EMR](https://aws.amazon.com/emr/pricing/), read for ca-central-1, not from the billing console.
+Columns: 
+- `resource_id` is the instance or cluster ID, and
+it has to match a screenshot
+- `predicted_s` is your prediction, entered **before** the run
+- `wall_s` is the measured run time and `startup_s` the measured wait before it, kept in separate columns
+- `cost_usd` comes from AWS's price pages for [EC2 on-demand instances](https://aws.amazon.com/ec2/pricing/on-demand/) and [EMR](https://aws.amazon.com/emr/pricing/), read for ca-central-1.
 
-The order of work within a row is fixed. Write that row's `predicted_s` from the prediction block
-first, before you launch anything. Then run the stage, tee its
+Write the stages' `predicted_s` from the prediction block
+first, before you launch anything. 
+Then run the stage, tee its
 output to a log file, and hand the log to [`stages/parse_run_log.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py), which prints the measured row to
-the shell with `predicted_s` empty by design. Copy the measured values into the row you already
-wrote, or paste the printed row in and type your prediction back into it. The parser never produces
-`predicted_s`. That number is yours, and the notebook cell you wrote it in is what dates it.
+the shell. Copy its measured values into your row, and keep your own `predicted_s`: the parser leaves
+it empty.
 
 Before you parse a log, glance at [Did the run work?](#did-the-run-work) below:
 four lines that tell you whether the run is worth reading at all.
@@ -345,18 +338,17 @@ block reads `mode=duckdb` and has no retry or shuffle keys.
 
 # Stage 1. DuckDB on one EC2 instance {#stage-1}
 
-⚙️ **Data engineering:** what one instance costs in time to read a large Parquet dataset out of
-S3, and how much of each file it has to move to do it.
+⚙️ **Data engineering:** what one instance costs in time to read a large Parquet dataset out of S3.
 
 [`stages/stage1_duckdb.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py) points DuckDB at the raw trip files in S3. It filters to the study window,
 January 2022 through March 2025, and to valid records, keeps the 6 columns the model needs out of
 the 19 each file carries (20 in the 2025 files), and writes the result back to S3 as
 `matrix.parquet`, the model matrix Stage 2a reads. It runs on one EC2
-instance, an `m7g.xlarge` with 4 vCPU, with no cluster involved, and measures one pass over data: read rows, drop most of them, write what is
+instance, an `m7g.xlarge` with 4 vCPU, with no cluster involved, and measures one pass over data: DuckDB reads rows, drops most of them, writes what is
 left. 
 
 Before that pass it reads the same columns once without writing, so that `t_read_s` prices
-the read on its own. The supplied stage runs in one DuckDB process. The stages after it use Spark on an EMR cluster for the join, the grouping and the model fits.
+the read on its own.
 
 ## 1.1 Predict
 
@@ -367,7 +359,7 @@ the read on its own. The supplied stage runs in one DuckDB process. The stages a
 predicted_seconds ≈ bytes_to_read / read_rate
 ```
 
-- **Bytes to read.** In CloudShell, total the size of the 39 trip files:
+- **Data to read.** In CloudShell, total the size of the 39 trip files:
 
   ```bash
   aws s3 ls s3://$BUCKET/a2/raw/yellow_tripdata_ --summarize --human-readable --region ca-central-1
@@ -376,8 +368,9 @@ predicted_seconds ≈ bytes_to_read / read_rate
   The script reads 6 of the 19 columns in each file. The 2025 files have one extra column, which
   you don't need. Based on this, estimate how much data you expect to read. Give a
   one- or two-sentence explanation.
-- **Read rate.** The instance page lists the `m7g.xlarge` network as "up to 12.5 Gb/s". Write the
-  rate you will actually use in your prediction, in bytes per second, and where it came from.
+- **Read rate.** You have seen two numbers. The instance page lists the `m7g.xlarge` network as "up
+  to 12.5 Gb/s". In L1 and L2, a `t3a.large` pulled a 48 GB file from S3 at about 151 MB/s. Pick the
+  rate you will use, in MB per second, and say in one sentence why you chose it.
 
 All data has to come through the network before DuckDB can read it, so the network is one
 candidate limit (L2's throughput table). Compare the rate you achieve with it, and say what else
