@@ -94,8 +94,8 @@ prediction written before its run, `results.csv` with its 5 rows, and 2 screensh
 - Discuss the approach freely. Your measurements and your answers come from your own account.
 
 ::: {.callout-warning icon=false title="⚠️ Terminate resources when you no longer need them"}
-Terminate the Stage 1 instance once its results are on your laptop, and the EMR cluster after your last
-Stage 2 run. Terminate from the console, then check your budget the next morning. It is not enough to send the
+Terminate the Stage 1 instance once its row is in `results.csv` on your laptop and screenshot 1 is
+taken, and the EMR cluster after your last Stage 2 run and screenshot 2. Terminate from the console, then check your budget the next morning. It is not enough to send the
 command from the console or the CLI: you *need* to confirm both the result in the AWS console *and*
 the spend on your budget, which refreshes from billing about once a day. If you leave a 4-core cluster overnight, it will cost you about $12
 and eat a large chunk of your course budget.
@@ -820,7 +820,7 @@ grep -c '===A2-METRICS' stage2-4n.log      # 2
 ```
 
 Before you parse it, check that the run had all four nodes. The step's driver log prints one
-`Registered executor` line for each executor the run gained. Fewer than four means the wait was too short and the 4-node run is not comparable to the
+`Registered executor` line for each executor the run gained. Fewer than four means the run never had the whole cluster: the wait was too short and the 4-node run is not comparable to the
 2-node one: submit the step again. That log is `stderr.gz`, beside the `stdout.gz` you just pulled.
 
 ```bash
@@ -879,8 +879,8 @@ N × (launch + work) × cluster_rate = 24 × cluster_rate
 
 - **Launch.** Your measured `launch_s`, the gap from the create call to `WAITING`. Write it in hours.
 - **Work.** The job's own wall time, phase A plus phase B, from your 2-node run. Write it in hours.
-- **Cluster rate.** The hourly rate for a 1-primary, 2-core `m7g.xlarge` cluster, from the price
-  sheet. The primary node is billed too, so write the rate for all three nodes.
+- **Cluster rate.** For one `m7g.xlarge` node, add the ca-central-1 EC2 on-demand rate and the EMR
+  rate, then multiply by 3: the primary node is billed too. Write the rate for all three nodes.
 
 The left side launches a cluster for each of N runs in a day and pays for each launch and each run.
 The right side keeps one cluster up for all 24 hours. Put every time in hours, solve for the break-even
@@ -893,8 +893,8 @@ N counts runs a day. Answer three things in a sentence each:
 1. What your N means for a team that runs this job once a day.
 2. After rearranging, does N depend on the cluster rate? Say why or why not. Then, holding one of
    your two measured times fixed, how much would the other have to change to halve N?
-3. Recalculate N with your 4-node work time and the 4-node cluster rate, keeping your measured
-   `launch_s`. How much does N change, and why, from the two time inputs?
+3. Recalculate N with your 4-node work time, keeping your measured `launch_s`. How much does N
+   change, and why?
 
 ## 2b.4 Optional: find phase A's ceiling
 
@@ -920,8 +920,8 @@ save STEP_ID "$STEP_ID"
 
 Pull the log the same way as the graded runs. This is the one run where `shuffle_partitions` and
 `partitions` read 8 rather than 16, and the one run where a `retried=1`, or a lost executor and no
-metrics block at all, is a result rather than a reason to rerun: fewer, larger partitions push a worker
-harder. Keep these rows out of `results.csv`, which holds the 5 graded rows only.
+metrics block at all, is a result rather than a reason to rerun: with fewer partitions, each task holds more
+rows, needs more memory, and may spill to disk or lose its executor. Keep these rows out of `results.csv`, which holds the 5 graded rows only.
 :::::
 
 Before you run it, predict three things, one line each: 1. phase A's wall time, compared with your
@@ -966,8 +966,9 @@ Answer three things:
 ## 4.2 Daily cadence
 
 The agency will run this pipeline once a day, indefinitely, as you measured it: Stage 1 on one
-instance, the Spark work on EMR. Do you keep the cluster up or launch it for each run? Estimate the
-daily compute bill from the linked EC2 and EMR prices, counting each cluster launch once. Use your N from
+instance, the Spark work on EMR. Do you keep the cluster up or launch it for each run? Estimate one
+day's compute cost as Stage 1's `wall_s` at the EC2 rate, plus `launch_s` and both Spark phases at the
+2-node cluster rate, and say what this estimate leaves out. Use your N from
 prediction 4, and name the one change to the workload that would flip your answer.
 
 ## 4.3 100× the data
@@ -1014,8 +1015,9 @@ aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region ca-central-1
 Confirm both state changes on the console list pages.
 
 Then check your budget the next morning, and again the morning after. A command that exits cleanly
-proves the API accepted your request. A cost that stops growing over the next days is the check that
-nothing is left running.
+proves the API accepted your request. First confirm `TERMINATED` on the EC2 and EMR console pages.
+The spend on the next two mornings is a backstop that lags behind: if it keeps rising, look at every
+EC2 instance and EMR cluster again.
 :::::
 
 ## Then submit to Canvas

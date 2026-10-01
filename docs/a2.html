@@ -4258,7 +4258,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Terminate the Stage 1 instance once its results are on your laptop, and the EMR cluster after your last Stage 2 run. Terminate from the console, then check your budget the next morning. It is not enough to send the command from the console or the CLI: you <em>need</em> to confirm both the result in the AWS console <em>and</em> the spend on your budget, which refreshes from billing about once a day. If you leave a 4-core cluster overnight, it will cost you about $12 and eat a large chunk of your course budget.</p>
+<p>Terminate the Stage 1 instance once its row is in <code>results.csv</code> on your laptop and screenshot 1 is taken, and the EMR cluster after your last Stage 2 run and screenshot 2. Terminate from the console, then check your budget the next morning. It is not enough to send the command from the console or the CLI: you <em>need</em> to confirm both the result in the AWS console <em>and</em> the spend on your budget, which refreshes from billing about once a day. If you leave a 4-core cluster overnight, it will cost you about $12 and eat a large chunk of your course budget.</p>
 </div>
 </div>
 <section id="code" class="level2">
@@ -4931,7 +4931,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> s3 cp s3://<span class="va">$BUCKET</span>/a2/emr-logs/<span class="va">$CLUSTER_ID</span>/steps/<span class="va">$STEP_ID</span>/stdout.gz <span class="at">-</span> <span class="at">--region</span> ca-central-1 <span class="dt">\</span></span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="fu">gunzip</span> <span class="op">&gt;</span> stage2-4n.log</span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="at">-c</span> <span class="st">&#39;===A2-METRICS&#39;</span> stage2-4n.log      <span class="co"># 2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Before you parse it, check that the run had all four nodes. The step’s driver log prints one <code>Registered executor</code> line for each executor the run gained. Fewer than four means the wait was too short and the 4-node run is not comparable to the 2-node one: submit the step again. That log is <code>stderr.gz</code>, beside the <code>stdout.gz</code> you just pulled.</p>
+<p>Before you parse it, check that the run had all four nodes. The step’s driver log prints one <code>Registered executor</code> line for each executor the run gained. Fewer than four means the run never had the whole cluster: the wait was too short and the 4-node run is not comparable to the 2-node one: submit the step again. That log is <code>stderr.gz</code>, beside the <code>stdout.gz</code> you just pulled.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb34"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> s3 cp s3://<span class="va">$BUCKET</span>/a2/emr-logs/<span class="va">$CLUSTER_ID</span>/steps/<span class="va">$STEP_ID</span>/stderr.gz <span class="at">-</span> <span class="at">--region</span> ca-central-1 <span class="dt">\</span></span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="fu">gunzip</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&#39;Registered executor&#39;</span>      <span class="co"># 4</span></span>
 <span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> stages/parse_run_log.py stage2-4n.log <span class="at">--resource-id</span> <span class="va">$CLUSTER_ID</span> <span class="at">--nodes</span> 4</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -5019,7 +5019,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <ul>
 <li><strong>Launch.</strong> Your measured <code>launch_s</code>, the gap from the create call to <code>WAITING</code>. Write it in hours.</li>
 <li><strong>Work.</strong> The job’s own wall time, phase A plus phase B, from your 2-node run. Write it in hours.</li>
-<li><strong>Cluster rate.</strong> The hourly rate for a 1-primary, 2-core <code>m7g.xlarge</code> cluster, from the price sheet. The primary node is billed too, so write the rate for all three nodes.</li>
+<li><strong>Cluster rate.</strong> For one <code>m7g.xlarge</code> node, add the ca-central-1 EC2 on-demand rate and the EMR rate, then multiply by 3: the primary node is billed too. Write the rate for all three nodes.</li>
 </ul>
 <p>The left side launches a cluster for each of N runs in a day and pays for each launch and each run. The right side keeps one cluster up for all 24 hours. Put every time in hours, solve for the break-even N, and show the rearrangement as well as the answer. Then give the smallest whole number of runs a day for which keeping the cluster up costs less.</p>
 </div>
@@ -5028,7 +5028,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <ol type="1">
 <li>What your N means for a team that runs this job once a day.</li>
 <li>After rearranging, does N depend on the cluster rate? Say why or why not. Then, holding one of your two measured times fixed, how much would the other have to change to halve N?</li>
-<li>Recalculate N with your 4-node work time and the 4-node cluster rate, keeping your measured <code>launch_s</code>. How much does N change, and why, from the two time inputs?</li>
+<li>Recalculate N with your 4-node work time, keeping your measured <code>launch_s</code>. How much does N change, and why?</li>
 </ol>
 </section>
 <section id="b.4-optional-find-phase-as-ceiling" class="level2">
@@ -5052,7 +5052,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--steps</span> <span class="st">&quot;Type=Spark,Name=a2-stage2-4n-p8,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://</span><span class="va">$BUCKET</span><span class="st">/a2/stages/stage2_spark.py,--trips,s3://</span><span class="va">$BUCKET</span><span class="st">/a2/matrix.parquet,--zones,s3://</span><span class="va">$BUCKET</span><span class="st">/a2/raw/zones.parquet,--out,s3://</span><span class="va">$BUCKET</span><span class="st">/a2/stage2-4n-p8,--platform,emr,--fit-rounds,50,--shuffle-partitions,8]&quot;</span> <span class="dt">\</span></span>
 <span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--query</span> <span class="st">&#39;StepIds[0]&#39;</span> <span class="at">--output</span> text<span class="va">)</span></span>
 <span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="ex">save</span> STEP_ID <span class="st">&quot;</span><span class="va">$STEP_ID</span><span class="st">&quot;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Pull the log the same way as the graded runs. This is the one run where <code>shuffle_partitions</code> and <code>partitions</code> read 8 rather than 16, and the one run where a <code>retried=1</code>, or a lost executor and no metrics block at all, is a result rather than a reason to rerun: fewer, larger partitions push a worker harder. Keep these rows out of <code>results.csv</code>, which holds the 5 graded rows only.</p>
+<p>Pull the log the same way as the graded runs. This is the one run where <code>shuffle_partitions</code> and <code>partitions</code> read 8 rather than 16, and the one run where a <code>retried=1</code>, or a lost executor and no metrics block at all, is a result rather than a reason to rerun: with fewer partitions, each task holds more rows, needs more memory, and may spill to disk or lose its executor. Keep these rows out of <code>results.csv</code>, which holds the 5 graded rows only.</p>
 </div>
 </div>
 </div>
@@ -5090,7 +5090,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </section>
 <section id="daily-cadence" class="level2">
 <h2 class="anchored" data-anchor-id="daily-cadence">4.2 Daily cadence</h2>
-<p>The agency will run this pipeline once a day, indefinitely, as you measured it: Stage 1 on one instance, the Spark work on EMR. Do you keep the cluster up or launch it for each run? Estimate the daily compute bill from the linked EC2 and EMR prices, counting each cluster launch once. Use your N from prediction 4, and name the one change to the workload that would flip your answer.</p>
+<p>The agency will run this pipeline once a day, indefinitely, as you measured it: Stage 1 on one instance, the Spark work on EMR. Do you keep the cluster up or launch it for each run? Estimate one day’s compute cost as Stage 1’s <code>wall_s</code> at the EC2 rate, plus <code>launch_s</code> and both Spark phases at the 2-node cluster rate, and say what this estimate leaves out. Use your N from prediction 4, and name the one change to the workload that would flip your answer.</p>
 </section>
 <section id="the-data" class="level2">
 <h2 class="anchored" data-anchor-id="the-data">4.3 100× the data</h2>
@@ -5126,7 +5126,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb37"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> emr terminate-clusters <span class="at">--cluster-ids</span> <span class="va">$CLUSTER_ID</span> <span class="at">--region</span> ca-central-1</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 terminate-instances <span class="at">--instance-ids</span> <span class="va">$INSTANCE_ID</span> <span class="at">--region</span> ca-central-1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Confirm both state changes on the console list pages.</p>
-<p>Then check your budget the next morning, and again the morning after. A command that exits cleanly proves the API accepted your request. A cost that stops growing over the next days is the check that nothing is left running.</p>
+<p>Then check your budget the next morning, and again the morning after. A command that exits cleanly proves the API accepted your request. First confirm <code>TERMINATED</code> on the EC2 and EMR console pages. The spend on the next two mornings is a backstop that lags behind: if it keeps rising, look at every EC2 instance and EMR cluster again.</p>
 </div>
 </div>
 </div>
