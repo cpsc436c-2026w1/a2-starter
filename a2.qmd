@@ -1,5 +1,5 @@
 ---
-title: "A2 DRAFT: Spark on EMR: Exploring performance and cost"
+title: "A2 Spark on EMR: Exploring performance and cost"
 format:
   html:
     code-copy: true
@@ -7,13 +7,6 @@ subtitle: "What does each stage cost on one instance and on a cluster?"
 date: last-modified
 toc-depth: 3
 ---
-
-::: {.callout-warning icon=false title="Draft, watch for updates"}
-This is a draft of Assignment 2. The commands, the code and some details may still change
-before the release, and the released version is the one that counts. The commands now sit
-inside the assignment, in the collapsed 📋 blocks, and there is no separate job aid page.
-:::
-
 
 # 💼 The case
 

@@ -8,7 +8,7 @@
 
 <meta name="dcterms.date" content="2026-10-01">
 
-<title>A2 DRAFT: Spark on EMR: Exploring performance and cost – CPSC 436C A2</title>
+<title>A2 Spark on EMR: Exploring performance and cost – CPSC 436C A2</title>
 <style>
 
 code{white-space: pre-wrap;}
@@ -4158,7 +4158,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">A2 DRAFT: Spark on EMR: Exploring performance and cost</h1>
+<h1 class="title">A2 Spark on EMR: Exploring performance and cost</h1>
 <p class="subtitle lead">What does each stage cost on one instance and on a cluster?</p>
 </div>
 
@@ -4182,19 +4182,6 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </header>
 
 
-<div class="callout callout-style-default callout-warning no-icon callout-titled" title="Draft, watch for updates">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Warning</span>Draft, watch for updates
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>This is a draft of Assignment 2. The commands, the code and some details may still change before the release, and the released version is the one that counts. The commands now sit inside the assignment, in the collapsed 📋 blocks, and there is no separate job aid page.</p>
-</div>
-</div>
 <section id="the-case" class="level1">
 <h1>💼 The case</h1>
 <p>A transportation agency keeps three years of New York taxi trips as Parquet files in S3, one file per month. Every quarter it has to report two things: which pickup zones earn their curb space, and whether a small model can predict fares well enough to argue with. Producing that report takes three steps, in this order:</p>
@@ -4346,7 +4333,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Three things happen once per account, before anything else: EMR gets the service roles it will not launch without, your bucket gets created, and the Stage 1 instance gets a role of its own. They are one block of commands, and it is the first block you run (see 📋 below). A1’s role does not carry over, because it is scoped to the a1 bucket.</p>
 <p><span id="once-per-account"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Commands: Once per account">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4355,7 +4342,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>All of this runs in CloudShell. EMR will not launch without its service roles.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> emr create-default-roles <span class="at">--region</span> ca-central-1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -4403,7 +4390,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Create <code>s3://436c-a2-&lt;your CWL&gt;/</code> and put 40 objects in it: the 39 monthly trip files from the New York Taxi and Limousine Commission (TLC) distribution, and the zone lookup, which arrives as CSV and is converted to Parquet once as <code>zones.parquet</code>. The fetch loop runs for a few minutes, so start it before you read the rest of this (see 📋 below). The files travel from the TLC’s public file service into your bucket, so nothing here is downloaded to your laptop.</p>
 <p><span id="get-the-data"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Commands: Get the data">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4412,7 +4399,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Thirty-nine monthly yellow-taxi files, January 2022 to March 2025, and the zone lookup, straight from the New York Taxi and Limousine Commission (TLC) distribution into your bucket. Run this in CloudShell, before the Stage 1 instance exists. It moves about 2 GB and takes a few minutes, so start it before you read ahead. Each file is deleted after it lands in S3, which keeps the local disk from filling.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> Y <span class="kw">in</span> 2022 2023 2024<span class="kw">;</span> <span class="cf">do</span></span>
@@ -4453,7 +4440,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Before you parse a log, glance at <a href="#did-the-run-work">Did the run work?</a> below: four lines that tell you whether the run is worth reading at all.</p>
 <p><span id="did-the-run-work"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Did the run work?">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4462,7 +4449,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Four lines to glance at in a log before you parse it. If any of them is wrong, the run is not comparable to your others, and re-running is the only fix.</p>
 <ul>
@@ -4513,7 +4500,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Launch one <code>m7g.xlarge</code> with your CWL in the name from CloudShell, then run the script from a shell on the instance itself (see 📋 below). It prints one metrics block.</p>
 <p><span id="stage-1-on-one-ec2-instance"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Commands: Stage 1 on one EC2 instance">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4522,7 +4509,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>From CloudShell, launch one <code>m7g.xlarge</code> on Amazon Linux 2023 with the instance profile you made under <a href="#once-per-account">Once per account</a>.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="va">INSTANCE_ID</span><span class="op">=</span><span class="va">$(</span><span class="ex">aws</span> ec2 run-instances <span class="at">--region</span> ca-central-1 <span class="dt">\</span></span>
@@ -4624,7 +4611,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <li>The timed pass, <code>wall_s</code>, should take well under a minute.</li>
 </ul>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Compare with our run, open after you have written your explanation">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4633,7 +4620,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div id="callout-10" class="callout-10-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>In our runs almost all of Stage 1’s wall time was the read. The filter and the write cost very little next to it.</p>
 </div>
@@ -4722,7 +4709,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Build the cluster in the EMR console: 1 primary and 2 core <code>m7g.xlarge</code>, release <code>emr-spark-8.0.0</code>, Spark, the idle termination setting left on, and your CWL in the cluster name. Before you leave the cluster page, export its definition as a CLI command and save it as <code>launch-cluster.sh</code> and upload to CloudShell. If the cluster terminates, that command rebuilds it. The settings, the export, and the fallback are in the 📋 block below. Every command from here to the end of the assignment runs in CloudShell.</p>
 <p><span id="launch-the-cluster"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Console steps and commands: Launch the cluster">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4731,7 +4718,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-16" class="callout-16-contents callout-collapse collapse">
+<div id="callout-15" class="callout-15-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>First check that the bucket holds the data and Stage 1’s output, because the cluster logs to it and every step reads from it. The bucket comes from <a href="#once-per-account">Once per account</a>, the data from <a href="#get-the-data">Get the data</a>, and <code>matrix.parquet</code> from <a href="#stage-1-on-one-ec2-instance">Stage 1 on one EC2 instance</a>.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> s3 ls s3://<span class="va">$BUCKET</span>/a2/        <span class="co"># expect raw/ and matrix.parquet</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -4770,7 +4757,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Time the launch: the gap from the create call to the cluster reaching <code>WAITING</code> is <code>launch_s</code>, which Question 3.2 needs. You pay that wait once and then run twice. Now submit the job as a step (see 📋 below). It prints one metrics block per phase.</p>
 <p><span id="submit-the-job-as-a-step"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Commands: Submit the job as a step">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-17-contents" aria-controls="callout-17" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4779,7 +4766,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-17" class="callout-17-contents callout-collapse collapse">
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>CloudShell needs its own copy of the starter repo: the clone you made in Stage 1 lived on the instance. Clone it here once, then upload the job script. Both EMR runs read this same object.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~</span>
@@ -4874,7 +4861,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <li>Both phases should complete, and every metrics block should read <code>retried=0</code>, with <code>partitions</code> in the phase A block reading 16.</li>
 </ul>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Compare with our run, open after you have written your explanation in 2b.2">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-19-contents" aria-controls="callout-19" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-18-contents" aria-controls="callout-18" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4883,7 +4870,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-19" class="callout-19-contents callout-collapse collapse">
+<div id="callout-18" class="callout-18-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>In our runs phase A could not finish before its slowest partition did, so <code>task_max_s</code> was a large share of phase A <code>wall_s</code>.</p>
 </div>
@@ -4903,7 +4890,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Write both new predictions into <code>results.csv</code>, then resize the cluster to 4 core nodes and re-run the same step (see 📋 below). Resizing in place keeps you from needing another cluster launch. If you launch a second cluster instead, record its <code>launch_s</code> separately.</p>
 <p><span id="resize-and-re-run"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Commands: Resize and re-run">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-21-contents" aria-controls="callout-21" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-20-contents" aria-controls="callout-20" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -4912,7 +4899,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-21" class="callout-21-contents callout-collapse collapse">
+<div id="callout-20" class="callout-20-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Grow the cluster in place rather than launching a second one. Find the CORE group first.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> emr describe-cluster <span class="at">--cluster-id</span> <span class="va">$CLUSTER_ID</span> <span class="at">--region</span> ca-central-1 <span class="dt">\</span></span>
@@ -5050,7 +5037,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </ol>
 <p><span id="shut-down-and-verify"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Commands: Shut down and verify">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-23-contents" aria-controls="callout-23" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-22-contents" aria-controls="callout-22" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -5059,7 +5046,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-23" class="callout-23-contents callout-collapse collapse">
+<div id="callout-22" class="callout-22-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Check first that <code>results.csv</code> and your two screenshots are on your laptop. Terminating the instance takes its disk with it, and nothing below can be undone.</p>
 <p>In CloudShell:</p>
@@ -5080,7 +5067,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </ul>
 <p><span id="where-the-evidence-lives"></span></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="📋 Which screenshots">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-24-contents" aria-controls="callout-24" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-23-contents" aria-controls="callout-23" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -5089,7 +5076,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-24" class="callout-24-contents callout-collapse collapse">
+<div id="callout-23" class="callout-23-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Two screenshots, and every id in them has to appear in <code>results.csv</code>.</p>
 <table class="caption-top table">
