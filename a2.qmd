@@ -525,9 +525,9 @@ Phase `A_aggregate` sends a copy of the 265-row zone lookup, `zones.parquet`, to
 *broadcast*, which is cheap because the lookup is just a few hundred rows), joins it to
 `matrix.parquet`, then groups by pickup zone. The group-by is a **wide** dependency: every zone's rows have to meet in one place before
 they can be aggregated, so every row first goes into the *shuffle* (an `Exchange` in L6's plans), and
-only the rows meant for another node travel over the network. `shuffle_write_bytes` is what the shuffle costs. The job fixes the number of those places at
-16 shuffle partitions, the same 16 at either node count, and the
-stage after the shuffle has 16 pieces of work to hand out. The job turns off adaptive execution's
+the rows meant for another node travel over the network. `shuffle_write_bytes` is the shuffle size. The job fixes the number of exchange places at
+16 shuffle partitions for both cluster configurations, and the
+next stage after the shuffle sets 16 tasks to hand out. The job turns off adaptive execution's
 merging of small partitions (L6), so number of tasks stays the same.
 
 Phase `B_fit` explores the grid: 12 combinations on 5 folds, 60 fits, each independent of the
@@ -551,7 +551,7 @@ time_A ≈ rows / (cores × rows_per_second_per_core)
   count only core-node cores. Write the core count you are predicting with.
 
 Phase A has 16 partitions to hand out and a partition is worked on by one core, so 8 cores work
-through them in two waves and 16 cores in one. Say what that does to the formula above at each
+through them in two waves. Say what that does to the formula above at each
 node count.
 :::
 
@@ -578,18 +578,17 @@ Both predictions go into `results.csv` before you submit the step.
 `rubric={correctness:4}`
 
 ::: {.callout-warning icon=false title="⚠️ Finish Setup's bucket and data, and Stage 1, before you start the cluster"}
-The cluster writes its logs to `s3://436c-a2-<your CWL>/a2/emr-logs/`, and every step reads
-`matrix.parquet`, which [Stage 1](#stage-1) writes to the same bucket. The bucket and its data
+The cluster writes its logs to `s3://436c-a2-<your CWL>/a2/emr-logs/`, and the Stage 2 steps read
+`matrix.parquet`, which DuckDB writes in [Stage 1](#stage-1) to the same bucket. The bucket and its data
 come from [Bucket and data](#bucket-and-data) in Setup. Check both before you choose **Create
 cluster**: `aws s3 ls s3://436c-a2-<your CWL>/a2/` should list `raw/` and `matrix.parquet`. A
-cluster started without them bills from the moment it launches and can do nothing useful, and a
-step submitted without `matrix.parquet` fails with *The given path is invalid*.
+cluster started without them doesn't do anything useful but still bills from the moment it launches.
 :::
 
 Build the cluster in the EMR console: 1 primary and 2 core `m7g.xlarge`, release `emr-spark-8.0.0`,
 Spark, the idle termination setting left on, and your CWL in the cluster name. Before you leave the
-cluster page, export its definition as a CLI command and save it as `launch-cluster.sh`. If the
-cluster terminates, that command rebuilds it exactly. The settings, the export, and the fallback
+cluster page, export its definition as a CLI command and save it as `launch-cluster.sh` and upload to CloudShell. If the
+cluster terminates, that command rebuilds it. The settings, the export, and the fallback
 are in the 📋 block below. Every command from here to the end of the assignment runs in
 CloudShell.
 
@@ -667,7 +666,7 @@ save LAUNCH_S 412
 :::::
 
 Time the launch: the gap from the create call to the cluster reaching `WAITING` is `launch_s`, which
-prediction 4 needs in 2b.3. You pay that wait once and then run twice. Now submit the job as a step (see 📋 below). It prints one metrics block per phase.
+Question 4.2 needs. You pay that wait once and then run twice. Now submit the job as a step (see 📋 below). It prints one metrics block per phase.
 
 []{#submit-the-job-as-a-step}
 
@@ -731,11 +730,10 @@ because the 4-node run reuses the cluster the launch already bought. Both printe
 | `task_med_s`, `task_max_s` | both | the median task of the phase's slowest Spark stage, and the longest task in any of its stages |
 | `fits_done`, `effective_parallelism` | B | fits completed, and `min(cores, fits)` as Spark saw it |
 
-Phase B's fits are deliberately not all the same size, so a spread in its task durations is the
-design of the grid rather than a finding. Parse both blocks into rows with `nodes=2`.
+Phase B's fits are deliberately not all the same size, so its task durations spread for that reason. Parse both blocks into rows with `nodes=2`.
 
 ::: {.callout-tip icon=false title="📸 Screenshot 2"}
-The cluster page while it runs: cluster ID, node count and types, release label, creation time,
+Screenshot the running cluster page: cluster ID, node count and types, release label, creation time,
 CWL in the name. The cluster ID must equal `resource_id` in your `2_emr` rows.
 :::
 
@@ -745,7 +743,7 @@ CWL in the name. The cluster ID must equal `resource_id` in your `2_emr` rows.
 
 ::: {.callout-note collapse="true" icon=false title="Compare with our run, open after you have written your explanation in 2b.2"}
 In our runs phase A could not finish before its slowest partition did, so `task_max_s` was a large
-share of phase A's own `wall_s`.
+share of phase A `wall_s`.
 :::
 ::::
 
@@ -758,11 +756,10 @@ The explanation for both node counts comes in 2b.2, once the 4-node run gives yo
 `rubric={reasoning:4, correctness:3}`
 
 Redo predictions 2 and 3 with the core count doubled, replacing `seconds_per_fit` in prediction 3 with
-`wall_s * effective_parallelism / fits_done` from your 2-node run. The partition count is an
-argument to the script, so carry the same 16 into prediction 2.
+`wall_s * effective_parallelism / fits_done` from your 2-node run. We set partition count to 16, reuse it in this prediction as well.
 
 Write both new predictions into `results.csv`, then resize the cluster to 4 core nodes and re-run
-the same step (see 📋 below). Resizing in place keeps your one launch. If you launch a second
+the same step (see 📋 below). Resizing in place keeps you from needing another cluster launch. If you launch a second
 cluster instead, record its `launch_s` separately.
 
 []{#resize-and-re-run}
@@ -822,10 +819,8 @@ Both runs carry the same `resource_id`, because both ran on the one cluster.
 :::::
 
 ::: {.callout-tip icon=false title="👀 Quick check"}
-- Both phases should complete with `retried=0`, and `partitions` in the phase A block should read
-  16, as it did at 2 nodes.
+- Both phases should complete with `retried=0`, and `partitions` = 16, as it was for 2 nodes.
 - The step's driver log should show 4 registered executors (the 📋 commands above show how to count them).
-  Fewer means the run measured a smaller cluster: submit it again.
 :::
 
 ## 2b.2 Explain the gaps
@@ -843,122 +838,55 @@ Then answer:
 
 1. For each phase, is the 4-node run about the same speed as the 2-node run, about twice as fast, or
    somewhere else? Both phases ran on the same cluster, in the same run, over the same data, so name
-   what differs: the dependency type in each phase, how many pieces of work it had to hand out, and
-   how many cores were waiting for one. Hint: L6's waves and its checks for a slow stage: read, divide,
+   what differs. Hint: L6's waves and its checks for a slow stage: read, divide,
    wait, move.
 2. Did doubling the cluster change how much data the shuffle moved? Say whether it should have,
-   and why. Hint: L6, on what sets a shuffle's size.
+   and why. Hint: L6, on what sets exchange size.
 3. At 100 core nodes, what does each phase approach, and why does it stop there? Point at the
-   measured number in your own run that sets each floor. Then name the one change to the job that
+   measured number in your own run that sets each floor. Then name the a potential change to the job that
    would put phase A below its floor, and say why buying more nodes is not that change.
-
-## 2b.3 Keep the cluster up, or launch it for each run?
-
-`rubric={reasoning:10}`
-
-Suppose the agency runs this job several times a day. It can keep the cluster up all day and submit
-each run to it, or launch a cluster for every run and let it terminate after. Launching costs a wait
-you measured, `launch_s`, every time; keeping it up costs every idle hour. L7's studio works this
-method on lecture numbers.
-
-::: {.callout-tip icon=false title="📐 Prediction 4, how many runs a day before keeping the cluster up costs less?"}
-```
-N × (launch + work) × cluster_rate = 24 × cluster_rate
-```
-
-- **Launch.** Your measured `launch_s`, the gap from the create call to `WAITING`. Write it in hours.
-- **Work.** The job's own wall time, phase A plus phase B, from your 2-node run. Write it in hours.
-- **Cluster rate.** For one `m7g.xlarge` node, add the ca-central-1 EC2 on-demand rate and the EMR
-  rate, then multiply by 3: the primary node is billed too. Write the rate for all three nodes.
-
-The left side launches a cluster for each of N runs in a day and pays for each launch and each run.
-The right side keeps one cluster up for all 24 hours. Put every time in hours, solve for the break-even
-N, and show the rearrangement as well as the answer. Then give the smallest whole number of runs a day
-for which keeping the cluster up costs less.
-:::
-
-N counts runs a day. Answer three things in a sentence each:
-
-1. What your N means for a team that runs this job once a day.
-2. After rearranging, does N depend on the cluster rate? Say why or why not. Then, holding one of
-   your two measured times fixed, how much would the other have to change to halve N?
-3. Recalculate N with your 4-node work time, keeping your measured `launch_s`. How much does N
-   change, and why?
-
-## 2b.4 Optional: find phase A's ceiling
-
-This run is ungraded. It is the fastest way to check your answer to the 100-node question in 2b.2.
-The number of shuffle partitions is an argument to the script, so you can set it lower than the
-default as well as higher. Keep the cluster at 4 core nodes and submit the same step once more with
-`--shuffle-partitions 8` and a fresh output prefix (see 📋 below). This puts 8 partitions on
-16 cores.
-
-[]{#optional-re-run-at-8-partitions}
-
-::::: {.callout-note collapse="true" icon=false title="📋 Commands: Optional: re-run at 8 partitions"}
-The ungraded extension in the assignment. Same cluster at 4 core nodes, same script, one extra
-argument and a new output prefix so nothing already written is disturbed. The flag belongs to this
-one run only: every graded run leaves it off.
-
-```bash
-STEP_ID=$(aws emr add-steps --cluster-id $CLUSTER_ID --region ca-central-1 \
-  --steps "Type=Spark,Name=a2-stage2-4n-p8,ActionOnFailure=CONTINUE,Args=[--deploy-mode,client,s3://$BUCKET/a2/stages/stage2_spark.py,--trips,s3://$BUCKET/a2/matrix.parquet,--zones,s3://$BUCKET/a2/raw/zones.parquet,--out,s3://$BUCKET/a2/stage2-4n-p8,--platform,emr,--fit-rounds,50,--shuffle-partitions,8]" \
-  --query 'StepIds[0]' --output text)
-save STEP_ID "$STEP_ID"
-```
-
-Pull the log the same way as the graded runs. This is the one run where `shuffle_partitions` and
-`partitions` read 8 rather than 16, and the one run where a `retried=1`, or a lost executor and no
-metrics block at all, is a result rather than a reason to rerun: with fewer partitions, each task holds more
-rows, needs more memory, and may spill to disk or lose its executor. Keep these rows out of `results.csv`, which holds the 5 graded rows only.
-:::::
-
-Before you run it, predict three things, one line each: 1. phase A's wall time, compared with your
-4-node run; 2. phase A's longest task (`task_max_s`); 3. phase B's wall time. Then run it and
-compare.
-
-This run may fail, and that is part of the exercise. With fewer partitions, each partition holds
-more rows, and 8 partitions of this data may not fit in a worker's memory. If you lose a worker, or
-the metrics block shows `retried=1`, write that down. What does it tell you about the partition
-count as a memory setting, and not only a speed setting? Hint: L6, Problem 4 (spill), and the *Shuffle
-spill* fields on the stage page.
-
-::: {.callout-warning icon=false title="⚠️ Use this flag for this one run only"}
-Use `--shuffle-partitions 8` for this one run only. All graded runs in Stages 2a and 2b use the
-script's default, and every comparison in the assignment depends on that.
-:::
 
 # Question 4. Which platform, and how to run it
 
-⚙️ **Data engineering:** the pipeline priced end to end, including what the handoffs between stages
-cost and what a daily schedule does to the bill.
+⚙️ **Data engineering goal:** the pipeline priced end to end, including what the handoffs between stages cost.
 
-`rubric={reasoning:25}`
+`rubric={reasoning:35}`
 
 Three questions, each answered from `results.csv` and your own run logs.
 
 ## 4.1 Handoffs through S3
 
-Each handoff here is a Parquet round trip through S3: one step writes its result, and the next step
-reads it back. No timer measures that on its own, because each write and each read sits inside a
-phase's `wall_s` along with the work.
+Between each stage, the job writes its result to S3 and the next stage reads it back. The handoff is a Parquet travelling back and forth to and from S3.
 
-Answer three things:
-
-1. Name the two places where one step writes its result to S3 and the next step reads it back.
-2. If all three steps ran in one Spark session on the cluster, which of those writes and reads would
+1. If all steps ran in one Spark session on the cluster, which of those writes and reads would
    disappear, and what would you give up in exchange? Think about rerunning only one step, and running
    steps on different machines.
-3. Stage 2b doubled the cluster without touching the code or copying the stored data anywhere. What
+2. Stage 2b doubled the cluster without touching the code or copying the stored data anywhere. What
    about this storage layout made that possible?
 
-## 4.2 Daily cadence
+## 4.2 Keep the cluster up, or launch it for each run?
 
-The agency will run this pipeline once a day, indefinitely, as you measured it: Stage 1 on one
-instance, the Spark work on EMR. Do you keep the cluster up or launch it for each run? Estimate one
-day's compute cost as Stage 1's `wall_s` at the EC2 rate, plus `launch_s` and both Spark phases at the
-2-node cluster rate, and say what this estimate leaves out. Use your N from
-prediction 4, and name the one change to the workload that would flip your answer.
+Suppose the agency runs this job several times a day. It can keep the cluster up all day and submit
+each run to it, or launch a cluster for every run and let it terminate after. Launching costs a wait
+you measured, `launch_s`, every time. Keeping the cluster up costs every idle hour. L7's studio works
+this method on lecture numbers.
+
+```
+N × (launch + work) × cluster_rate = 24 × cluster_rate
+```
+
+- **Launch.** Your measured `launch_s`, in hours.
+- **Work.** Phase A plus phase B from your 2-node run, in hours.
+- **Cluster rate.** For one `m7g.xlarge` node, add the ca-central-1 EC2 on-demand rate and the EMR
+  rate, then multiply by 3: the primary node is billed too.
+
+1. Solve for the break-even N, showing the rearrangement, then give the smallest whole number of
+   runs a day for which keeping the cluster up costs less.
+2. Recalculate N with your 4-node work time, keeping your measured `launch_s`. How much does N
+   change, and why?
+3. The agency runs the whole pipeline once a day. Estimate that day's compute cost: Stage 1's
+   `wall_s` at the EC2 rate, plus `launch_s` and both Spark phases at the 2-node cluster rate. Say
+   what this estimate leaves out.
 
 ## 4.3 100× the data
 
@@ -1039,8 +967,8 @@ Canvas and nowhere else, and never submit a screenshot showing a key, a token, o
 |---|---|
 | Setup: roles, bucket, data, naming | 10 |
 | Stage 1: predict, measure, explain | 20 |
-| Stages 2a and 2b: two node counts, four gaps, keep the cluster up or launch it | 40 |
-| Question 4: synthesis | 25 |
+| Stages 2a and 2b: two node counts, four gaps | 30 |
+| Question 4: synthesis | 35 |
 | Mechanics and screenshots | 5 |
 
 Inside each stage, about a quarter of the marks go to the prediction, a quarter to the measurement,
