@@ -499,9 +499,9 @@ little next to it.
 `rubric={reasoning:10}`
 
 1. Set your Stage 1 prediction against your measured `wall_s`. About right, out by a factor of a few, or
-   out by an order of magnitude? Say which term was wrong and in which direction.
+   out by an order of magnitude? Say which prediction was wrong and in which direction.
 2. You read less data than the files hold. Name what in the file format let the reader skip
-   the rest, and say why the saving stops where it does.
+   the rest, and say where it doesn't help and why.
 3. The instance page advertises 12.5 Gb/s and you did not get it. What is that figure measuring, and
    why is it the wrong number to predict a sustained read with?
 4. You could have run this stage on 3 instances instead of 1, at roughly 3 times the hourly rate.
@@ -518,24 +518,20 @@ it.
 
 Spark runs a job as one *driver*, the process that plans the work, and some number of *executors*,
 the processes that do it, one or more per node in the cluster. It splits the data into
-*partitions*, chunks of rows, and hands partitions out to executors. A partition is worked on by one
-core.
+Spark *partitions*, chunks of rows, and hands partitions out to executors. A partition is worked on by one
+core  (a slot) at a time, so the number of partitions and the number of cores together set how many waves of work.
 
 Phase `A_aggregate` sends a copy of the 265-row zone lookup, `zones.parquet`, to every executor (a
-*broadcast*, which is cheap because the lookup is a few hundred rows), joins it to
-`matrix.parquet`, then groups by pickup zone. The group-by is a wide dependency: every zone's rows have to meet in one place before
+*broadcast*, which is cheap because the lookup is just a few hundred rows), joins it to
+`matrix.parquet`, then groups by pickup zone. The group-by is a **wide** dependency: every zone's rows have to meet in one place before
 they can be aggregated, so every row first goes into the *shuffle* (an `Exchange` in L6's plans), and
 only the rows meant for another node travel over the network. `shuffle_write_bytes` is what the shuffle costs. The job fixes the number of those places at
 16 shuffle partitions, the same 16 at either node count, and the
 stage after the shuffle has 16 pieces of work to hand out. The job turns off adaptive execution's
-merging of small partitions (L6), so the 16 stay 16.
+merging of small partitions (L6), so number of tasks stays the same.
 
-Phase `B_fit` searches the grid: 12 combinations on 5 folds, 60 fits, each independent of the
+Phase `B_fit` explores the grid: 12 combinations on 5 folds, 60 fits, each independent of the
 others. No join, no shuffle, one task per fit.
-
-You run this file twice, at 2 core nodes and then at 4, on EMR release `emr-spark-8.0.0`. A scaling
-claim needs two points, so this is the one repeat in the assignment. That release runs Spark 4, and
-L6's Spark UI pages come from Spark 3.5, so expect small differences in the UI.
 
 ## 2a.1 Predict
 
@@ -546,11 +542,11 @@ L6's Spark UI pages come from Spark 3.5, so expect small differences in the UI.
 time_A ≈ rows / (cores × rows_per_second_per_core)
 ```
 
-- **Rows.** `rows_out` from your Stage 1 metrics block, which is what `matrix.parquet` holds. Write
+- **Rows.** `rows_out` from your Stage 1 metrics block (what `matrix.parquet` holds). Write
   the number down.
 - **Rows per second per core.** Stage 1's `rows_out` divided by its `wall_s`, divided again by its
-  4 cores. That rate prices a scan and phase A also aggregates, so write the rate you are using and
-  say that it makes your answer a floor.
+  4 cores. Stage 1 only read and filtered those rows. Phase A also joins and groups them, so it does more
+  work per row. Write the rate you use, and treat your answer as the least time phase A can take.
 - **Cores.** Core nodes times the 4 vCPU an `m7g.xlarge` has. No task runs on the primary node (L5), so
   count only core-node cores. Write the core count you are predicting with.
 
