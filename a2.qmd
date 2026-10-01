@@ -1,9 +1,9 @@
 ---
-title: "A2 DRAFT: Spark and Glue: Exploring performance and cost"
+title: "A2 DRAFT: Spark on EMR: Exploring performance and cost"
 format:
   html:
     code-copy: true
-subtitle: "What does each stage cost on three platforms?"
+subtitle: "What does each stage cost on one instance and on a cluster?"
 date: last-modified
 toc-depth: 3
 ---
@@ -29,15 +29,14 @@ steps, in this order:
    slices of the data, and every fit is independent of the others.
 
 You will run these steps on a single EC2 instance with DuckDB, then on a Spark cluster on EMR at two
-sizes, then on Glue, and compare what each cost. At each step you will be given hints about the size
+sizes, and compare what each cost. At each step you will be given hints about the size
 of the data, which you need to verify against the data itself. We will ask you to estimate the
 resources and time each step needs, and to compare your estimates with the real numbers you get as
 you go.
 
 DuckDB is a query engine that runs inside a single process and reads Parquet straight out of S3. You
 launched the kind of EC2 instance it runs on in A1, and the engine is the new part. Amazon EMR gives
-you a Spark cluster you can see, size, and resize. AWS Glue takes the same Spark job and runs it
-without showing you an instance at all.
+you a Spark cluster you can see, size, and resize.
 
 Your numbers will not be the lecture's numbers, and two of you running the same stage an hour apart
 will not agree to the second. Track your own number, compare orders of magnitude, and say why yours
@@ -55,9 +54,6 @@ landed where it did.
      |            phase A: join and group by pickup zone. phase B: 60 model fits.
      v
   zone features in S3
-     |   STAGE 3  the same job file, submitted to Glue instead
-     v
-  the same outputs, produced somewhere else
 ```
 
 On every stage, we ask you to predict, measure and explain what happens. **Predict** what will happen: give an estimate of performance or price before executing anything. **Measure** what actually happened: run
@@ -72,20 +68,19 @@ then compare it with the measurement. Learning to do these comparisons is how yo
 engineering intuition. You don't get downgraded for wrong predictions.
 
 ::: {.callout-note icon=false title="🗺️ Shape of the work"}
-Work in stage order: every Spark run reads `matrix.parquet`, which Stage 1 writes, and Stage 3 is compared against your Stage 2a and 2b numbers. Setup comes first: the
+Work in stage order: every Spark run reads `matrix.parquet`, which Stage 1 writes. Setup comes first: the
 roles, the bucket, and the data fetch, which runs for a few minutes on its own while you read ahead.
-Stage 1 then writes `matrix.parquet`, and nothing in Stages 2a, 2b or 3 can run until that file
+Stage 1 then writes `matrix.parquet`, and nothing in Stages 2a or 2b can run until that file
 exists.
 
 Stages 2a and 2b run on one cluster, which you launch at 2 core nodes and then resize in place to
 4. Two waits there are normal, and neither means anything is wrong: the
 cluster takes minutes to reach `WAITING` after the create call, and after a resize the new nodes
-report as running some way before Spark has an executor on each of them. Stage 3 reuses your Stage 2a and 2b
-measurements as its comparison, so run it after both cluster runs.
+report as running some way before Spark has an executor on each of them.
 
 Question 4 needs no cloud at all. You answer it from `results.csv` and your own run logs, so it is the part
 to leave until after everything is terminated. What you hand in is the notebook with every
-prediction written before its run, `results.csv` with its 7 rows, and 3 screenshots.
+prediction written before its run, `results.csv` with its 5 rows, and 2 screenshots.
 :::
 
 # Setup
@@ -94,12 +89,13 @@ prediction written before its run, `results.csv` with its 7 rows, and 3 screensh
 
 - Create every resource in region `ca-central-1`. Accept the default network settings, and accept
   the defaults everywhere else unless this page tells you otherwise.
-- Your CWL goes in the name of every resource you create: bucket, instance, cluster, Glue job.
+- Your CWL goes in the name of every resource you create: bucket, instance, cluster.
 - The starter cluster config terminates itself when idle. Do not remove that setting.
 - Discuss the approach freely. Your measurements and your answers come from your own account.
 
-::: {.callout-warning icon=false title="⚠️ Terminate resources when you finish the stage"}
-Terminate from the console, then check your budget the next morning. It is not enough to send the
+::: {.callout-warning icon=false title="⚠️ Terminate resources when you no longer need them"}
+Terminate the Stage 1 instance once its results are on your laptop, and the EMR cluster after your last
+Stage 2 run. Terminate from the console, then check your budget the next morning. It is not enough to send the
 command from the console or the CLI: you *need* to confirm both the result in the AWS console *and*
 the spend on your budget, which refreshes from billing about once a day. If you leave a 4-core cluster overnight, it will cost you about $12
 and eat a large chunk of your course budget.
@@ -111,14 +107,14 @@ Everything you run is in the starter repository. Each file opens on GitHub, so y
 read it before you run it:
 
 - [`stages/stage1_duckdb.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage1_duckdb.py): runs Stage 1, DuckDB reading the trip files from S3 and writing the model matrix
-- [`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py): the one Spark job behind Stages 2a, 2b and 3, on EMR and on Glue
+- [`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py): the one Spark job behind Stages 2a and 2b
 - [`stages/parse_run_log.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py): turns a run's metrics blocks into `results.csv` rows
 - [`results.csv`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/results.csv): the header you fill in, one row per stage and phase
 
 The scripts above also time themselves and print metrics, which makes the work hard to see. Two shorter files hold only the work, the same queries and computation with the timing left out. They are for reading; the graded runs use the scripts above.
 
 - [`workload/stage1.sql`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/workload/stage1.sql): the query Stage 1 runs
-- [`workload/stage2.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/workload/stage2.py): the Spark work of Stages 2a, 2b and 3, from the join to the 60 fits
+- [`workload/stage2.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/workload/stage2.py): the Spark work of Stages 2a and 2b, from the join to the 60 fits
 
 ## Your shells and variables {#variables}
 
@@ -136,8 +132,8 @@ run on your laptop, which only keeps `results.csv` and your screenshots. Two she
 | `run-instances` in [Stage 1 on one EC2 instance](#stage-1-on-one-ec2-instance) | CloudShell | nothing |
 | the Stage 1 run itself, and its parse | Session Manager on the Stage 1 instance | the tab, for the length of the run. Anything written to that disk dies when you terminate the instance |
 | creating the cluster in [Launch the cluster](#launch-the-cluster) | the EMR console, in your browser | nothing. Its **AWS CLI export** goes into `launch-cluster.sh` in CloudShell |
-| the rest of [Launch the cluster](#launch-the-cluster) through [Stage 3 on Glue](#stage-3-on-glue), and [Shut down and verify](#shut-down-and-verify) | CloudShell | nothing in the shell. The cluster and the Glue job run on AWS whether the tab is open or not |
-| `results.csv` and the three screenshots | your laptop | they stay on your laptop from the first row you write to the moment you submit |
+| the rest of [Launch the cluster](#launch-the-cluster) through [Resize and re-run](#resize-and-re-run), and [Shut down and verify](#shut-down-and-verify) | CloudShell | nothing in the shell. The cluster runs on AWS whether the tab is open or not |
+| `results.csv` and the two screenshots | your laptop | they stay on your laptop from the first row you write to the moment you submit |
 
 The commands name your resources through shell variables such as `$BUCKET`, so you can paste them
 unchanged. You set the variables once, in CloudShell. They live in `~/a2.env`, a file in
@@ -156,7 +152,7 @@ echo $BUCKET
 ```
 
 The last line prints `436c-a2-` and your CWL. Every other variable is an id AWS hands you along the
-way: the subnet, the instance, the cluster, each step, the Glue run. The command that creates each
+way: the subnet, the instance, the cluster, each step. The command that creates each
 id saves it with `save`, which adds a line to `~/a2.env`, so you do not type ids by hand. The one
 exception is the cluster id, which you copy from the EMR console. `cat ~/a2.env` shows everything
 saved so far.
@@ -226,14 +222,16 @@ aws iam add-role-to-instance-profile --instance-profile-name $CWL-a2-role --role
 inbound rule. The inline policy is your bucket, and only your bucket. IAM takes about ten seconds to
 propagate, so a `run-instances` fired immediately after the last line can come back saying the
 instance profile does not exist. Wait, then run it again.
+
+`CWL-a2-role` is the name to put in `INSTANCE_PROFILE` everywhere below.
 :::::
 
 ::: {.callout-tip icon=false title="💡 Why a role and not a login"}
 A general (simplified!) rule: instances and services get roles, people get accounts with logins. If you need to
-assign some permissions to an EC2 instance, an EMR cluster or Glue, you need to create a role
+assign some permissions to an EC2 instance or an EMR cluster, you need to create a role
 allowing them to do something on your behalf. Remember that in A1 we created instance and execution
-roles; here in A2 we use the default EMR service roles and create a Glue role following the 📋 commands in Stage 3,
-and in Stage 3 you will create one custom yourself. Every time you see an "access denied" type of
+roles; here in A2 we use the default EMR service roles and create one role for the Stage 1 instance
+following the 📋 commands below. Every time you see an "access denied" type of
 error, you need to check for a missing role, or a permission you need to add.
 :::
 
@@ -303,16 +301,15 @@ aws s3 ls s3://$BUCKET/a2/raw/yellow_tripdata_ --summarize --human-readable --re
 ## The results file
 
 `results.csv` ships with the assignment, header only. Keep it on your laptop, from the first row you
-write to the moment you submit, and append one row per stage-phase there: seven rows in all, one for
-Stage 1, two each for Stages 2a and 2b, two for Stage 3. Nothing you run in the cloud writes to this file. The
+write to the moment you submit, and append one row per stage-phase there: five rows in all, one for
+Stage 1 and two each for Stages 2a and 2b. Nothing you run in the cloud writes to this file. The
 Stage 1 instance is terminated before you hand anything in, so a copy that lives only on it is a
 copy you lose.
 
-Four of its columns need explaining. `resource_id` is the instance, cluster, or Glue job-run ID, and
+Four of its columns need explaining. `resource_id` is the instance or cluster ID, and
 it has to match a screenshot. `predicted_s` is your prediction, entered **before** the run.
-`wall_s` and `startup_s` stay in separate columns. `cost_usd` comes from AWS's price pages for [EC2 on-demand instances](https://aws.amazon.com/ec2/pricing/on-demand/),
-[EMR](https://aws.amazon.com/emr/pricing/) and [Glue](https://aws.amazon.com/glue/pricing/), read for
-ca-central-1, not from the billing console.
+`wall_s` and `startup_s` stay in separate columns. `cost_usd` comes from AWS's price pages for [EC2 on-demand instances](https://aws.amazon.com/ec2/pricing/on-demand/)
+and [EMR](https://aws.amazon.com/emr/pricing/), read for ca-central-1, not from the billing console.
 
 The order of work within a row is fixed. Write that row's `predicted_s` from the prediction block
 first, before you launch anything. Then run the stage, tee its
@@ -330,14 +327,14 @@ four lines that tell you whether the run is worth reading at all.
 Four lines to glance at in a log before you parse it. If any of them is wrong, the run is not
 comparable to your others, and re-running is the only fix.
 
-- **The block arrived.** `grep -c '===A2-METRICS' YOUR.log` prints 1 for Stage 1 and 2 for Stages 2a, 2b
-  and 3. A 0 means the script stopped early, and the reason sits above where the block should
+- **The block arrived.** `grep -c '===A2-METRICS' YOUR.log` prints 1 for Stage 1 and 2 for Stages 2a
+  and 2b. A 0 means the script stopped early, and the reason sits above where the block should
   have been.
 The first check applies to every run. The other three apply to the Spark runs only: Stage 1's
 block reads `mode=duckdb` and has no retry or shuffle keys.
 
-- **`mode=rest`** in every Stage 2 and Stage 3 block, with `rest_target` naming the host the metrics reader reached. A
-  cluster or Glue run that exits 3 reached no Spark REST endpoint and measured nothing. That is a
+- **`mode=rest`** in every Stage 2 block, with `rest_target` naming the host the metrics reader reached. A
+  cluster run that exits 3 reached no Spark REST endpoint and measured nothing. That is a
   failed run, not a slow one.
 - **`retried=0`.** A 1 means a stage or task was retried, so the timings are not comparable: rerun.
 - **`shuffle_partitions` reads 16**, and `partitions` in the phase A block reads the same 16. If the
@@ -359,7 +356,7 @@ instance, an `m7g.xlarge` with 4 vCPU, with no cluster involved, and measures on
 left. 
 
 Before that pass it reads the same columns once without writing, so that `t_read_s` prices
-the read on its own. The supplied stage runs in one DuckDB process. On the following steps we will run this on EMR cluster with Spark.
+the read on its own. The supplied stage runs in one DuckDB process. The stages after it use Spark on an EMR cluster for the join, the grouping and the model fits.
 
 ## 1.1 Predict
 
@@ -377,7 +374,7 @@ predicted_seconds ≈ bytes_to_read / read_rate
   ```
 
   The script reads 6 of the 19 columns in each file. The 2025 files have one extra column, which
-  you don't need. Based on this, estimate how many bytes you expect to read, and pay for. Give a
+  you don't need. Based on this, estimate how much data you expect to read. Give a
   one- or two-sentence explanation.
 - **Read rate.** The instance page lists the `m7g.xlarge` network as "up to 12.5 Gb/s". Write the
   rate you will actually use in your prediction, in bytes per second, and where it came from.
@@ -459,7 +456,7 @@ for one import at the top of the script and run none of the query.
 
 If the run stops on a `Secret Validation Failure` before it prints anything, the instance has no
 credentials to sign the S3 reads with: the instance profile is missing from the instance, so attach
-`<your CWL>-a2-role` to the instance and run it again.
+`INSTANCE_PROFILE` to the instance and run it again.
 
 Turn the log into a `results.csv` row. Confirm the metrics block arrived first: `grep -c
 '===A2-METRICS' stage1.log` prints 1.
@@ -472,8 +469,8 @@ It prints the row to the shell and writes nothing. Copy what it prints into the 
 your laptop, next to the prediction you put in that row before the run: the parser leaves
 `predicted_s` empty every time, and your own copy of the file is the only place that number exists.
 
-Leave the instance running if you want it for the S3 listings in Stage 2a's prediction blocks. It is the
-cheapest thing in the assignment, and [Shut down and verify](#shut-down-and-verify) is where it dies.
+Once its row is on your laptop and screenshot 1 is taken, nothing later needs the instance:
+[Shut down and verify](#shut-down-and-verify) terminates it, and you can do that now.
 :::::
 
 | Key | What it is |
@@ -482,7 +479,7 @@ cheapest thing in the assignment, and [Shut down and verify](#shut-down-and-veri
 | `bytes_on_disk` | compressed size of every column in the files it opened |
 | `bytes_needed` | compressed size of the 6 columns it read |
 | `rows_in`, `rows_out` | rows before the filter, rows after |
-| `mb_per_s_per_core` | the per-core read rate the run achieved. Stage 2a predicts from this |
+| `mb_per_s_per_core` | the per-core read rate the run achieved |
 
 Parse the log into your Stage 1 row and fill in `cost_usd` from the EC2 rate for ca-central-1.
 
@@ -510,7 +507,7 @@ little next to it.
 
 1. Set your Stage 1 prediction against your measured `wall_s`. About right, out by a factor of a few, or
    out by an order of magnitude? Say which term was wrong and in which direction.
-2. You paid for fewer bytes than the files hold. Name what in the file format let the reader skip
+2. You read less data than the files hold. Name what in the file format let the reader skip
    the rest, and say why the saving stops where it does.
 3. The instance page advertises 12.5 Gb/s and you did not get it. What is that figure measuring, and
    why is it the wrong number to predict a sustained read with?
@@ -536,7 +533,7 @@ Phase `A_aggregate` sends a copy of the 265-row zone lookup, `zones.parquet`, to
 `matrix.parquet`, then groups by pickup zone. The group-by is a wide dependency: every zone's rows have to meet in one place before
 they can be aggregated, so every row first goes into the *shuffle* (an `Exchange` in L6's plans), and
 only the rows meant for another node travel over the network. `shuffle_write_bytes` is what the shuffle costs. The job fixes the number of those places at
-16 shuffle partitions, the same 16 at either node count and on either platform, and the
+16 shuffle partitions, the same 16 at either node count, and the
 stage after the shuffle has 16 pieces of work to hand out. The job turns off adaptive execution's
 merging of small partitions (L6), so the 16 stay 16.
 
@@ -681,14 +678,14 @@ save LAUNCH_S 412
 :::::
 
 Time the launch: the gap from the create call to the cluster reaching `WAITING` is `launch_s`, which
-prediction 4 needs later. You pay that wait once and then run twice. Now submit the job as a step (see 📋 below). It prints one metrics block per phase.
+prediction 4 needs in 2b.3. You pay that wait once and then run twice. Now submit the job as a step (see 📋 below). It prints one metrics block per phase.
 
 []{#submit-the-job-as-a-step}
 
 ::::: {.callout-note collapse="true" icon=false title="📋 Commands: Submit the job as a step"}
 CloudShell needs its own copy of the starter repo: the clone you made in Stage 1 lived on the
-instance. Clone it here once, then upload the job script. Every later run reads this same object,
-on both platforms.
+instance. Clone it here once, then upload the job script. Both EMR runs read this
+same object.
 
 ```bash
 cd ~
@@ -700,8 +697,7 @@ aws s3 cp stages/stage2_spark.py s3://$BUCKET/a2/stages/stage2_spark.py --region
 Submit it as a step. `--deploy-mode client` keeps the driver
 on the primary node, which is what puts its stdout in the step's own log. The step passes no
 partition argument, so the job runs at its own default of 16 shuffle partitions and prints that back
-as `shuffle_partitions` in every metrics block. Both graded runs use the default, and so does
-Stage 3.
+as `shuffle_partitions` in every metrics block. Both graded runs use the default.
 
 ```bash
 STEP_ID=$(aws emr add-steps --cluster-id $CLUSTER_ID --region ca-central-1 \
@@ -824,8 +820,7 @@ grep -c '===A2-METRICS' stage2-4n.log      # 2
 ```
 
 Before you parse it, check that the run had all four nodes. The step's driver log prints one
-`Registered executor` line per executor, and all four have to arrive before the first stage is
-submitted. Fewer than four means the wait was too short and the 4-node run is not comparable to the
+`Registered executor` line for each executor the run gained. Fewer than four means the wait was too short and the 4-node run is not comparable to the
 2-node one: submit the step again. That log is `stderr.gz`, beside the `stdout.gz` you just pulled.
 
 ```bash
@@ -862,13 +857,46 @@ Then answer:
    what differs: the dependency type in each phase, how many pieces of work it had to hand out, and
    how many cores were waiting for one. Hint: L6's waves and its checks for a slow stage: read, divide,
    wait, move.
-2. Did doubling the cluster change how many bytes the shuffle moved? Say whether it should have,
+2. Did doubling the cluster change how much data the shuffle moved? Say whether it should have,
    and why. Hint: L6, on what sets a shuffle's size.
 3. At 100 core nodes, what does each phase approach, and why does it stop there? Point at the
    measured number in your own run that sets each floor. Then name the one change to the job that
    would put phase A below its floor, and say why buying more nodes is not that change.
 
-## 2b.3 Optional: find phase A's ceiling
+## 2b.3 Keep the cluster up, or launch it for each run?
+
+`rubric={reasoning:10}`
+
+Suppose the agency runs this job several times a day. It can keep the cluster up all day and submit
+each run to it, or launch a cluster for every run and let it terminate after. Launching costs a wait
+you measured, `launch_s`, every time; keeping it up costs every idle hour. L7's studio works this
+method on lecture numbers.
+
+::: {.callout-tip icon=false title="📐 Prediction 4, how many runs a day before keeping the cluster up costs less?"}
+```
+N × (launch + work) × cluster_rate = 24 × cluster_rate
+```
+
+- **Launch.** Your measured `launch_s`, the gap from the create call to `WAITING`. Write it in hours.
+- **Work.** The job's own wall time, phase A plus phase B, from your 2-node run. Write it in hours.
+- **Cluster rate.** The hourly rate for a 1-primary, 2-core `m7g.xlarge` cluster, from the price
+  sheet. The primary node is billed too, so write the rate for all three nodes.
+
+The left side launches a cluster for each of N runs in a day and pays for each launch and each run.
+The right side keeps one cluster up for all 24 hours. Put every time in hours, solve for the break-even
+N, and show the rearrangement as well as the answer. Then give the smallest whole number of runs a day
+for which keeping the cluster up costs less.
+:::
+
+N counts runs a day. Answer three things in a sentence each:
+
+1. What your N means for a team that runs this job once a day.
+2. After rearranging, does N depend on the cluster rate? Say why or why not. Then, holding one of
+   your two measured times fixed, how much would the other have to change to halve N?
+3. Recalculate N with your 4-node work time and the 4-node cluster rate, keeping your measured
+   `launch_s`. How much does N change, and why, from the two time inputs?
+
+## 2b.4 Optional: find phase A's ceiling
 
 This run is ungraded. It is the fastest way to check your answer to the 100-node question in 2b.2.
 The number of shuffle partitions is an argument to the script, so you can set it lower than the
@@ -881,7 +909,7 @@ default as well as higher. Keep the cluster at 4 core nodes and submit the same 
 ::::: {.callout-note collapse="true" icon=false title="📋 Commands: Optional: re-run at 8 partitions"}
 The ungraded extension in the assignment. Same cluster at 4 core nodes, same script, one extra
 argument and a new output prefix so nothing already written is disturbed. The flag belongs to this
-one run only: every graded run and the Glue run leave it off.
+one run only: every graded run leaves it off.
 
 ```bash
 STEP_ID=$(aws emr add-steps --cluster-id $CLUSTER_ID --region ca-central-1 \
@@ -893,8 +921,7 @@ save STEP_ID "$STEP_ID"
 Pull the log the same way as the graded runs. This is the one run where `shuffle_partitions` and
 `partitions` read 8 rather than 16, and the one run where a `retried=1`, or a lost executor and no
 metrics block at all, is a result rather than a reason to rerun: fewer, larger partitions push a worker
-harder. Keep these rows out of `results.csv`, or label them so a marker can see they are not one of
-the 7 rows the submission asks for.
+harder. Keep these rows out of `results.csv`, which holds the 5 graded rows only.
 :::::
 
 Before you run it, predict three things, one line each: 1. phase A's wall time, compared with your
@@ -908,246 +935,47 @@ count as a memory setting, and not only a speed setting? Hint: L6, Problem 4 (sp
 spill* fields on the stage page.
 
 ::: {.callout-warning icon=false title="⚠️ Use this flag for this one run only"}
-Use `--shuffle-partitions 8` for this one run only. All graded runs in Stages 2a, 2b and 3 use the
+Use `--shuffle-partitions 8` for this one run only. All graded runs in Stages 2a and 2b use the
 script's default, and every comparison in the assignment depends on that.
 :::
 
-# Stage 3. The same job on Glue
-
-⚙️ **Data engineering:** the same Spark job on a managed service, compared with the cluster on wall
-time, on the wait before the work starts, and on price.
-
-You do not edit a line of the code. [`stages/stage2_spark.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/stage2_spark.py) runs as a Glue job script exactly as it
-ran on EMR, because it takes its platform from an argument and reads its inputs from S3. Only the
-submission changes, so submit it with the arguments your graded EMR runs used, and leave the
-optional detour's `--shuffle-partitions` behind.
-
-Configure the job with Glue version 6.0, worker type `G.1X` (4 vCPU and 16 GB, the same size as one
-`m7g.xlarge`), 3 workers, and **autoscaling switched off**. With autoscaling on the worker count is
-not the constant it appears to be, and the comparison is worthless. One difference comes with the
-platform: Glue's workers run on x86 processors, while your EMR
-nodes are Graviton, so the processor changes along with everything else.
-
-Three workers, not two, because Glue counts the driver among its workers and EMR does not. 3 `G.1X`
-workers is 1 driver plus 2 executors, matching the 1 primary plus 2 core nodes you measured. That is
-an assumption rather than something the console tells you, so state it and check it against
-`effective_parallelism` in the `B_fit` block.
-
-## 3.1 Predict
-
-`rubric={reasoning:5}`
-
-You have already measured this job at this core count, so predict each phase's `wall_s` directly
-from your 2-node EMR run. Then name the numbers in the metrics block you expect to come back
-unchanged, and say what would have to be true about Glue for each to move. Predict `startup_s`
-separately, and say what from.
-
-## 3.2 Measure
-
-`rubric={correctness:5}`
-
-Submit the job (see 📋 below). The job-run page reports startup and execution separately, so keep them in separate columns. Parse both blocks into `3_glue` rows with
-`nodes` set to your worker count, and cost from the Glue rate for ca-central-1.
-
-[]{#stage-3-on-glue}
-
-::::: {.callout-note collapse="true" icon=false title="📋 Commands: Stage 3 on Glue"}
-The script in S3 is the one EMR just ran, byte for byte. Only the submission changes.
-
-Glue needs a role it can assume itself. A fresh account has none (the 2026-08 pilot's
-did not). Create it once, with the same create-then-attach move as the instance role:
-
-```bash
-aws iam create-role --role-name $CWL-a2-glue-role \
-  --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"glue.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-aws iam attach-role-policy --role-name $CWL-a2-glue-role \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
-aws iam put-role-policy --role-name $CWL-a2-glue-role --policy-name a2-s3 \
-  --policy-document file://$HOME/a2-s3-policy.json
-```
-
-Create the job with 3 `G.1X` workers. The assignment says why that is the number.
-
-```bash
-aws glue create-job --region ca-central-1 \
-  --name $CWL-a2-stage3 \
-  --role $CWL-a2-glue-role \
-  --glue-version 6.0 \
-  --worker-type G.1X --number-of-workers 3 \
-  --command Name=glueetl,ScriptLocation=s3://$BUCKET/a2/stages/stage2_spark.py,PythonVersion=3 \
-  --no-job-run-queuing-enabled \
-  --default-arguments '{"--conf":"spark.ui.enabled=true","--enable-auto-scaling":"false"}'
-```
-
-Those are the only two default arguments the job takes. `--conf` is one key holding one string, so a
-second Spark setting joins that same value (`"spark.ui.enabled=true --conf spark.other=x"`) rather
-than arriving as a second key, which would overwrite the first.
-
-`--enable-auto-scaling` stays `"false"`. With autoscaling on, the worker count moves during the run
-and stops being the constant this whole comparison rests on. `spark.ui.enabled=true` keeps the
-driver's REST endpoint alive, which is where the script reads its metrics from.
-
-```bash
-cat > stage3-args.json <<EOF
-{"--trips":"s3://$BUCKET/a2/matrix.parquet","--zones":"s3://$BUCKET/a2/raw/zones.parquet","--out":"s3://$BUCKET/a2/stage3","--platform":"glue","--fit-rounds":"50"}
-EOF
-JOB_RUN_ID=$(aws glue start-job-run --region ca-central-1 \
-  --job-name $CWL-a2-stage3 \
-  --arguments file://stage3-args.json \
-  --query 'JobRunId' --output text)
-save JOB_RUN_ID "$JOB_RUN_ID"
-```
-
-The script's own flags travel as Glue job arguments, which is why they keep their `--` prefixes
-here. Glue injects arguments of its own, `--JOB_NAME` among them, and the script ignores anything it
-does not recognise.
-
-A run that reports `FAILED` within seconds, with an error saying the role "should be given assume
-role permissions for Glue Service", started before the new role had spread through IAM, which takes
-up to a minute after `create-role`. Nothing is wrong with the role: wait a minute and start the run
-again.
-
-Starting a second run the moment the first reports `SUCCEEDED` gets you
-`ConcurrentRunsExceededException`. The state flips before the run's slot is released, and this job
-is created with queuing off, so the new run is rejected rather than held. Wait about a minute and
-start it again.
-
-Read the timings off the run record.
-
-```bash
-aws glue get-job-run --job-name $CWL-a2-stage3 --run-id $JOB_RUN_ID --region ca-central-1 \
-  --query 'JobRun.{State:JobRunState,Started:StartedOn,Completed:CompletedOn,Execution:ExecutionTime,DPUSeconds:DPUSeconds}'
-```
-
-`startup_s` is elapsed time minus `ExecutionTime`: take `Completed` minus `Started` in seconds and
-subtract the execution seconds. The console prints the same figure as the run's start-up time.
-Save it, with your number in place of `42`:
-
-```bash
-save STARTUP_S 42
-```
-
- For
-DPU-seconds, use the `DPUSeconds` field when it is populated, otherwise 3 workers times
-`ExecutionTime`, since `G.1X` bills 1 DPU per worker.
-
-The driver's stdout goes to the CloudWatch log group `/aws-glue/jobs/output`, in a stream named
-for the run id exactly, with nothing on the end. That one stream is the driver's, and it holds both
-metrics blocks. The executor streams live in `/aws-glue/jobs/error` under names like
-your run id followed by `_g-<hash>`, and hold no metrics blocks.
-
-```bash
-aws logs get-log-events --region ca-central-1 \
-  --log-group-name /aws-glue/jobs/output --log-stream-name $JOB_RUN_ID \
-  --start-from-head --output text --query 'events[*].message' \
-  | tr '\t' '\n' > stage3.log
-grep -c '===A2-METRICS' stage3.log         # 2
-```
-
-The `tr` puts one log message per line, which the parser needs. If the count comes back under 2, the
-stream is paginated: open the same log group from the job-run page in the console and copy the
-output from there. Then parse, with the startup seconds you just computed.
-
-```bash
-python3 stages/parse_run_log.py stage3.log --resource-id $JOB_RUN_ID --nodes 3 --startup-s $STARTUP_S
-```
-:::::
-
-::: {.callout-tip icon=false title="📸 Screenshot 3"}
-The Glue job-run page: run ID, Glue version, worker type and count, autoscaling off, start and end
-times. The run ID must equal `resource_id` in your `3_glue` rows.
-:::
-
-::: {.callout-tip icon=false title="👀 Quick check"}
-- Read the shuffle bytes and the partition count off both runs and put them side by side.
-- Wall times need not match EMR's. Glue 6.0 and `emr-spark-8.0.0` do not ship the same Spark build.
-- `startup_s` goes on both Stage 3 rows, separate from each phase's `wall_s`.
-:::
-
-## 3.3 The identity check
-
-`rubric={reasoning:5}`
-
-| Number | EMR at 2 nodes | Glue | Moved? |
-|---|---|---|---|
-| `shuffle_write_bytes`, phase A | your value | your value | yes or no |
-| `partitions`, phase A | your value | your value | yes or no |
-| `task_med_s` and `task_max_s`, phase A | your value | your value | yes or no |
-| `wall_s`, phase A and phase B | your value | your value | yes or no |
-| the wait before the work started | your `launch_s` | your `startup_s` | yes or no |
-
-Then answer two questions. Which rows stayed put, and are those numbers properties of the job, of
-the data, or of the workers it ran on? For the rows that did move, what about Glue moved them?
-
-## 3.4 The crossover
-
-`rubric={reasoning:5}`
-
-L7's studio works this method on lecture numbers: a fixed launch cost, divided by the saving each
-run makes.
-
-::: {.callout-tip icon=false title="📐 Prediction 4, how many runs before EMR costs less than Glue?"}
-```
-(launch + N × work) × cluster_rate = N × (startup + work) × dpu_rate
-```
-
-- **Launch.** Your measured EMR `launch_s`, the gap from the create call to `WAITING`. Write it in
-  hours.
-- **Work.** The job's own wall time, phase A plus phase B, from your 2-node EMR run. Write it in
-  hours.
-- **Cluster rate.** The hourly rate for a 1-primary, 2-core `m7g.xlarge` cluster, from the price
-  sheet. The primary node is billed too, so write the rate for all three nodes.
-- **Startup.** Your measured Glue `startup_s`, in hours.
-- **DPU rate.** The Glue per-DPU-hour rate for ca-central-1, times your DPU count. A DPU, or
-  Data Processing Unit, is the unit Glue bills in, and `G.1X` bills 1 DPU per worker, so your 3
-  workers are 3 DPU for as long as the run lasts. Write the rate and the count you used.
-
-Put every time in hours before you substitute. The left side prices one launch amortised over N runs
-done back to back. Solve for N, and show the rearrangement as well as the answer.
-:::
-
-N counts runs, not gigabytes. Write one sentence on what your N means for a team that owns this
-pipeline, and one on which measured term would have to change to halve it. If your algebra returns
-no positive N, say which term is responsible for that.
-
-# Question 4. Which platform, and when
+# Question 4. Which platform, and how to run it
 
 ⚙️ **Data engineering:** the pipeline priced end to end, including what the handoffs between stages
 cost and what a daily schedule does to the bill.
 
-`rubric={reasoning:15}`
+`rubric={reasoning:25}`
 
 Three questions, each answered from `results.csv` and your own run logs.
 
-## 4.1 The handoff tax
+## 4.1 Handoffs through S3
 
-Every stage boundary here is a Parquet round trip through S3: one job writes the intermediate
-result, the next reads it back. No timer prices that on its own, because each write and re-read sits
-inside a phase's `wall_s` along with the work.
+Each handoff here is a Parquet round trip through S3: one step writes its result, and the next step
+reads it back. No timer measures that on its own, because each write and each read sits inside a
+phase's `wall_s` along with the work.
 
 Answer three things:
 
-1. Name the boundaries, and say whether the tax they add is large or small next to the pipeline's
-   total wall time.
-2. Since you had to launch the EMR cluster anyway, would running all three pieces of work there in
-   one Spark session with no intermediate write have been cheaper in time, in money, or in neither?
-3. Stage 3 swapped the platform without touching the code or moving a byte of data. What about this
-   storage layout made that possible, and what did it cost you?
+1. Name the two places where one step writes its result to S3 and the next step reads it back.
+2. If all three steps ran in one Spark session on the cluster, which of those writes and reads would
+   disappear, and what would you give up in exchange? Think about rerunning only one step, and running
+   steps on different machines.
+3. Stage 2b doubled the cluster without touching the code or copying the stored data anywhere. What
+   about this storage layout made that possible?
 
 ## 4.2 Daily cadence
 
-The agency will run this pipeline once a day, indefinitely. Which platform do you put each stage on,
-and what is the total daily bill? Use your N from prediction 4, and name the one change to the workload that
-would flip your answer.
-
-Then redo prediction 4's one line at the 4-node cluster rate, everything else held at your measured values. At
-which cluster size does EMR ever win, and what does that do to the argument you just made?
+The agency will run this pipeline once a day, indefinitely, as you measured it: Stage 1 on one
+instance, the Spark work on EMR. Do you keep the cluster up or launch it for each run? Estimate the
+daily compute bill from the linked EC2 and EMR prices, counting each cluster launch once. Use your N from
+prediction 4, and name the one change to the workload that would flip your answer.
 
 ## 4.3 100× the data
 
-At 100× the trip volume, which stage breaks first? Name the single number in your `results.csv` that
-tells you, give its measured value, say what it does at 100×, and say which stage you would move to
-a different platform first. One paragraph, with the number in it.
+At 100× the trip volume, which parts do you expect to become significantly slower, and which to fail
+first? Use your measured numbers (`shuffle_write_bytes`, phase A's `task_max_s`, Stage 1's `wall_s`)
+and what you know about each step. Name the resource that runs out, and, optionally, how you would
+approach easing it.
 
 # Submission and shutdown
 
@@ -1155,25 +983,25 @@ a different platform first. One paragraph, with the number in it.
 
 ## Shut down first
 
-Check first that `results.csv` and your three screenshots are on your laptop. The Stage 1 instance
+Check first that `results.csv` and your two screenshots are on your laptop. The Stage 1 instance
 goes away with its disk, and nothing in this list can be undone. Then, with the commands in the 📋 block
 below:
 
 1. Terminate the EMR cluster and confirm the state change on the cluster list.
-2. Terminate the Stage 1 instance. Glue leaves nothing running between job runs.
+2. Terminate the Stage 1 instance.
 3. Check your budget the next morning, and again the morning after: **Billing and Cost Management
    → Budgets**, open the budget you made in A1, read **Amount spent**. In **Cost Explorer** you can also see the
    spend by service, and a live cluster shows up as EMR. A number still climbing on the second
    morning is something alive: the
    EMR cluster (EMR → Clusters, with the state filter set to all states, because a terminating
    cluster still bills), the Stage 1 instance (EC2 → Instances), or a second cluster you launched
-   instead of resizing in 2b.1. Terminate whatever is not `TERMINATED` or `Stopped`, then check the
+   instead of resizing in 2b.1. Terminate whatever is not `TERMINATED`, then check the
    page again the following day.
 
 []{#shut-down-and-verify}
 
 ::::: {.callout-note collapse="true" icon=false title="📋 Commands: Shut down and verify"}
-Check first that `results.csv` and your three screenshots are on your laptop. Terminating the
+Check first that `results.csv` and your two screenshots are on your laptop. Terminating the
 instance takes its disk with it, and nothing below can be undone.
 
 In CloudShell:
@@ -1183,37 +1011,31 @@ aws emr terminate-clusters --cluster-ids $CLUSTER_ID --region ca-central-1
 aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region ca-central-1
 ```
 
-Confirm both state changes on the console list pages. The Glue job costs nothing between runs, so
-you can delete it or leave it.
-
-```bash
-aws glue delete-job --job-name $CWL-a2-stage3 --region ca-central-1
-```
+Confirm both state changes on the console list pages.
 
 Then check your budget the next morning, and again the morning after. A command that exits cleanly
-proves the API accepted your request. The budget proves the meter stopped.
+proves the API accepted your request. A cost that stops growing over the next days is the check that
+nothing is left running.
 :::::
 
 ## Then submit to Canvas
 
 - The notebook as `.ipynb` plus `.html` or `.pdf`, with every prediction filled in cell order.
-- `results.csv` with 7 rows: 1 for Stage 1, 2 each for Stages 2a and 2b, 2 for Stage 3.
-- Screenshots 1 to 3, each showing an ID that appears in `results.csv`.
+- `results.csv` with 5 rows: 1 for Stage 1 and 2 each for Stages 2a and 2b.
+- Screenshots 1 and 2, each showing an ID that appears in `results.csv`.
 
 []{#where-the-evidence-lives}
 
 ::::: {.callout-note collapse="true" icon=false title="📋 Which screenshots"}
-Three screenshots, and every id in them has to appear in `results.csv`.
+Two screenshots, and every id in them has to appear in `results.csv`.
 
 | Screenshot | Page | Must be legible |
 |---|---|---|
 | 1 | EC2 → Instances → your instance | instance id, `m7g.xlarge`, launch time, CWL in the name |
 | 2 | EMR → Clusters → your cluster | cluster id, release label, primary and core counts, CWL in the name |
-| 3 | Glue → Jobs → your job → the run | run id, Glue version, `G.1X`, worker count, autoscaling off, start and end |
 
-Take screenshot 2 while the cluster is alive and again after the resize, or take one after the
-resize showing 4 core nodes and note the earlier count from your log. The step list on the same page
-is worth capturing: it shows both runs on one cluster, which is the claim prediction 4 rests on.
+Take screenshot 2 after the resize, showing 4 core nodes, and note the earlier count from your log. The step list on the same page
+is worth capturing: it shows both runs on one cluster, sharing one launch.
 :::::
 
 Your account number should be visible in these screenshots: it is how we tell your work from
@@ -1226,9 +1048,8 @@ Canvas and nowhere else, and never submit a screenshot showing a key, a token, o
 |---|---|
 | Setup: roles, bucket, data, naming | 10 |
 | Stage 1: predict, measure, explain | 20 |
-| Stages 2a and 2b: two node counts, four gaps | 30 |
-| Stage 3: identity check and crossover | 20 |
-| Question 4: synthesis | 15 |
+| Stages 2a and 2b: two node counts, four gaps, keep the cluster up or launch it | 40 |
+| Question 4: synthesis | 25 |
 | Mechanics and screenshots | 5 |
 
 Inside each stage, about a quarter of the marks go to the prediction, a quarter to the measurement,

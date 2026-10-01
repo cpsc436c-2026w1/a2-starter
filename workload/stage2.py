@@ -1,7 +1,7 @@
-"""Stages 2a, 2b and 3, the work only: the Spark job, phase A then phase B.
+"""Stages 2a and 2b, the work only: the Spark job, phase A then phase B.
 
 For reading. The graded runs use stages/stage2_spark.py, which does exactly this and adds the timers and
-the metrics blocks. EMR (Stages 2a and 2b) and Glue (Stage 3) run the same file.
+the metrics blocks. Both stages run the same file on EMR, at 2 and then 4 core nodes.
 
 Input:  matrix.parquet (Stage 1's output) and zones.parquet (265 rows, the zone lookup)
 Output: features/ in S3, one row per pickup zone. Phase B's scores are computed and not kept.
