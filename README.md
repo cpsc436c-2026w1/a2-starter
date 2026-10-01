@@ -11,7 +11,7 @@ and the released version is the one that counts.
 | `workload/stage1.sql` | the query Stage 1 runs, for reading; no timers |
 | `workload/stage2.py` | the Spark work of Stages 2a, 2b and 3, for reading; no metrics code |
 | `stages/stage1_duckdb.py` | Stage 1: scan, filter, project to the model matrix |
-| `stages/stage2_spark.py` | Stages 2a, 2b and 3: the Spark job, submitted to EMR and to Glue unchanged |
+| `stages/stage2_spark.py` | Stages 2a and 2b: the Spark job, submitted to EMR as a step |
 | `stages/parse_run_log.py` | turns a run's log into a `results.csv` row |
 | `results.csv` | the results file, header only; keep it on your laptop |
 | `examples/extra-packages/` | not part of A2: how to add Python packages to an EMR cluster with uv, and what DuckDB does inside a Spark job |
