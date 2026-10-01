@@ -4649,7 +4649,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <p>Phase <code>B_fit</code> explores the grid: 12 combinations on 5 folds, 60 fits, each independent of the others. No join, no shuffle, one task per fit.</p>
 <section id="a.1-predict" class="level2">
 <h2 class="anchored" data-anchor-id="a.1-predict">2a.1 Predict</h2>
-<p><code>rubric={reasoning:4}</code></p>
+<p><code>rubric={reasoning:5}</code></p>
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="📐 Prediction 2, how long will phase A take?">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -4692,7 +4692,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 </section>
 <section id="a.2-measure" class="level2">
 <h2 class="anchored" data-anchor-id="a.2-measure">2a.2 Measure</h2>
-<p><code>rubric={correctness:4}</code></p>
+<p><code>rubric={correctness:5}</code></p>
 <div class="callout callout-style-default callout-warning no-icon callout-titled" title="⚠️ Finish Setup&#39;s bucket and data, and Stage 1, before you start the cluster">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -4885,7 +4885,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <h1>Stage 2b. The same cluster at 4 core nodes</h1>
 <section id="b.1-predict-then-measure" class="level2">
 <h2 class="anchored" data-anchor-id="b.1-predict-then-measure">2b.1 Predict, then measure</h2>
-<p><code>rubric={reasoning:4, correctness:3}</code></p>
+<p><code>rubric={reasoning:3, correctness:2}</code></p>
 <p>Redo predictions 2 and 3 with the core count doubled, replacing <code>seconds_per_fit</code> in prediction 3 with <code>wall_s * effective_parallelism / fits_done</code> from your 2-node run. We set partition count to 16, reuse it in this prediction as well.</p>
 <p>Write both new predictions into <code>results.csv</code>, then resize the cluster to 4 core nodes and re-run the same step (see 📋 below). Resizing in place keeps you from needing another cluster launch. If you launch a second cluster instead, record its <code>launch_s</code> separately.</p>
 <p><span id="resize-and-re-run"></span></p>
@@ -5117,7 +5117,7 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <table class="caption-top table">
 <thead>
 <tr class="header">
-<th>Section</th>
+<th>Step</th>
 <th>Points</th>
 </tr>
 </thead>
@@ -5127,20 +5127,44 @@ a:hover > code { color: var(--bs-link-hover-color); }
 <td>10</td>
 </tr>
 <tr class="even">
-<td>Stage 1: predict, measure, explain</td>
-<td>20</td>
+<td>1.1 Predict</td>
+<td>5</td>
 </tr>
 <tr class="odd">
-<td>Stages 2a and 2b: two node counts, four gaps</td>
-<td>30</td>
+<td>1.2 Measure</td>
+<td>5</td>
 </tr>
 <tr class="even">
-<td>Question 3: synthesis</td>
-<td>35</td>
+<td>1.3 Explain the gap</td>
+<td>10</td>
 </tr>
 <tr class="odd">
-<td>Mechanics and screenshots</td>
+<td>2a.1 Predict</td>
 <td>5</td>
+</tr>
+<tr class="even">
+<td>2a.2 Measure</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td>2b.1 Predict, then measure</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>2b.2 Explain the gaps</td>
+<td>15</td>
+</tr>
+<tr class="odd">
+<td>3. Which platform, and how to run it</td>
+<td>35</td>
+</tr>
+<tr class="even">
+<td>Submission mechanics and screenshots</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td><strong>Total</strong></td>
+<td><strong>100</strong></td>
 </tr>
 </tbody>
 </table>

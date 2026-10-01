@@ -528,7 +528,7 @@ others. No join, no shuffle, one task per fit.
 
 ## 2a.1 Predict
 
-`rubric={reasoning:4}`
+`rubric={reasoning:5}`
 
 ::: {.callout-tip icon=false title="📐 Prediction 2, how long will phase A take?"}
 ```
@@ -568,7 +568,7 @@ Both predictions go into `results.csv` before you submit the step.
 
 ## 2a.2 Measure
 
-`rubric={correctness:4}`
+`rubric={correctness:5}`
 
 ::: {.callout-warning icon=false title="⚠️ Finish Setup's bucket and data, and Stage 1, before you start the cluster"}
 The cluster writes its logs to `s3://436c-a2-<your CWL>/a2/emr-logs/`, and the Stage 2 steps read
@@ -746,7 +746,7 @@ The explanation for both node counts comes in 2b.2, once the 4-node run gives yo
 
 ## 2b.1 Predict, then measure
 
-`rubric={reasoning:4, correctness:3}`
+`rubric={reasoning:3, correctness:2}`
 
 Redo predictions 2 and 3 with the core count doubled, replacing `seconds_per_fit` in prediction 3 with
 `wall_s * effective_parallelism / fits_done` from your 2-node run. We set partition count to 16, reuse it in this prediction as well.
@@ -957,13 +957,19 @@ Canvas and nowhere else, and never submit a screenshot showing a key, a token, o
 
 # Rubric summary
 
-| Section | Points |
+| Step | Points |
 |---|---|
 | Setup: roles, bucket, data, naming | 10 |
-| Stage 1: predict, measure, explain | 20 |
-| Stages 2a and 2b: two node counts, four gaps | 30 |
-| Question 3: synthesis | 35 |
-| Mechanics and screenshots | 5 |
+| 1.1 Predict | 5 |
+| 1.2 Measure | 5 |
+| 1.3 Explain the gap | 10 |
+| 2a.1 Predict | 5 |
+| 2a.2 Measure | 5 |
+| 2b.1 Predict, then measure | 5 |
+| 2b.2 Explain the gaps | 15 |
+| 3. Which platform, and how to run it | 35 |
+| Submission mechanics and screenshots | 5 |
+| **Total** | **100** |
 
 Inside each stage, about a quarter of the marks go to the prediction, a quarter to the measurement,
 and half to the explanation. The `rubric={...}` tag on each subsection gives the exact split. The prediction marks
