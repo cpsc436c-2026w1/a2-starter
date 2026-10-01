@@ -221,7 +221,7 @@ class _Phase:
 
     def __exit__(self, *exc):
         wall = time.monotonic() - self.t0
-        # ended_at_epoch_s is wall-clock, not monotonic: Q4.1 subtracts one block's stamp
+        # ended_at_epoch_s is wall-clock, not monotonic: Q3.1 subtracts one block's stamp
         # from another's to bound the gap between two phases.
         r = {"wall_s": round(wall, 1), "shuffle_write_bytes": 0, "partitions": 0,
              "tasks": 0, "retried": 0, "task_min_s": 0.0, "task_med_s": 0.0,

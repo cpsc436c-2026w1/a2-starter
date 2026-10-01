@@ -42,7 +42,7 @@ On every stage, we ask you to predict, measure and explain what happens.
 the stage, and turn the metrics it prints into a row of `results.csv` with
 `stages/parse_run_log.py`. 
 - **Explain** the difference between your estimate and the measurement, and
-name the mechanism behind it, in the notebook, in 2 to 4 sentences.
+name the mechanism behind it, in your report, in 2 to 4 sentences.
 
 In predictions we ask for order-of-magnitude comparisons and don't ask for a precise estimate. As a rule of thumb, you should be able to do a back-of-the-envelope prediction looking at the numbers or their estimates, seldom needing code or GenAI. Write your prediction down before you launch the run, then compare it with the measurement. Learning to do these comparisons is how you build data engineering intuition. You don't get downgraded for wrong predictions.
 
@@ -69,11 +69,11 @@ Stages 2a and 2b run on one cluster, which you launch at 2 core nodes and then r
 
 The cluster takes minutes to reach `WAITING` after the create call, and after a resize the new nodes report as running some way before Spark has an executor on each of them.
 
-Question 4 asks you to reflect on your results. 
+Question 3 asks you to reflect on your results. 
 You answer it from `results.csv` and your own run logs, so it is the part
 to leave until after everything is terminated. 
 
-You will hand in the notebook with every
+You will hand in a PDF report with every
 prediction written before its run, `results.csv` with its 5 rows, and 2 screenshots.
 :::
 
@@ -105,7 +105,7 @@ read it before you run it:
 - [`stages/parse_run_log.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/stages/parse_run_log.py): turns a run's metrics blocks into `results.csv` rows
 - [`results.csv`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/results.csv): the header you fill in, one row per stage and phase
 
-The scripts above also time themselves and print metrics, which makes the work hard to see. Two shorter files hold only the work, the same queries and computation with the timing left out. They are for reading; the graded runs use the scripts above.
+The scripts we use in A2 to run the job contain a lot of extra code that reports back the metrics you need. If you want to look only at the code that answers the business question, the previews in the `workload` folder show it.
 
 - [`workload/stage1.sql`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/workload/stage1.sql): the query Stage 1 runs
 - [`workload/stage2.py`](https://github.com/cpsc436c-2026w1/a2-starter/blob/main/workload/stage2.py): the Spark work of Stages 2a and 2b, from the join to the 60 fits
@@ -666,7 +666,7 @@ save LAUNCH_S 412
 :::::
 
 Time the launch: the gap from the create call to the cluster reaching `WAITING` is `launch_s`, which
-Question 4.2 needs. You pay that wait once and then run twice. Now submit the job as a step (see 📋 below). It prints one metrics block per phase.
+Question 3.2 needs. You pay that wait once and then run twice. Now submit the job as a step (see 📋 below). It prints one metrics block per phase.
 
 []{#submit-the-job-as-a-step}
 
@@ -846,7 +846,7 @@ Then answer:
    measured number in your own run that sets each floor. Then name the a potential change to the job that
    would put phase A below its floor, and say why buying more nodes is not that change.
 
-# Question 4. Which platform, and how to run it
+# Question 3. Which platform, and how to run it
 
 ⚙️ **Data engineering goal:** the pipeline priced end to end, including what the handoffs between stages cost.
 
@@ -854,7 +854,7 @@ Then answer:
 
 Three questions, each answered from `results.csv` and your own run logs.
 
-## 4.1 Handoffs through S3
+## 3.1 Handoffs through S3
 
 Between each stage, the job writes its result to S3 and the next stage reads it back. The handoff is a Parquet travelling back and forth to and from S3.
 
@@ -864,7 +864,7 @@ Between each stage, the job writes its result to S3 and the next stage reads it 
 2. Stage 2b doubled the cluster without touching the code or copying the stored data anywhere. What
    about this storage layout made that possible?
 
-## 4.2 Keep the cluster up, or launch it for each run?
+## 3.2 Keep the cluster up, or launch it for each run?
 
 Suppose the agency runs this job several times a day. It can keep the cluster up all day and submit
 each run to it, or launch a cluster for every run and let it terminate after. Launching costs a wait
@@ -888,7 +888,7 @@ N × (launch + work) × cluster_rate = 24 × cluster_rate
    `wall_s` at the EC2 rate, plus `launch_s` and both Spark phases at the 2-node cluster rate. Say
    what this estimate leaves out.
 
-## 4.3 100× the data
+## 3.3 100× the data
 
 At 100× the trip volume, which parts do you expect to become significantly slower, and which to fail
 first? Use your measured numbers (`shuffle_write_bytes`, phase A's `task_max_s`, Stage 1's `wall_s`)
@@ -939,7 +939,8 @@ EC2 instance and EMR cluster again.
 
 ## Then submit to Canvas
 
-- The notebook as `.ipynb` plus `.html` or `.pdf`, with every prediction filled in cell order.
+- Your report as one PDF: each prediction and its reasoning, your measurements, and your answers to every
+  question, using the section numbers from the assignment.
 - `results.csv` with 5 rows: 1 for Stage 1 and 2 each for Stages 2a and 2b.
 - Screenshots 1 and 2, each showing an ID that appears in `results.csv`.
 
@@ -968,7 +969,7 @@ Canvas and nowhere else, and never submit a screenshot showing a key, a token, o
 | Setup: roles, bucket, data, naming | 10 |
 | Stage 1: predict, measure, explain | 20 |
 | Stages 2a and 2b: two node counts, four gaps | 30 |
-| Question 4: synthesis | 35 |
+| Question 3: synthesis | 35 |
 | Mechanics and screenshots | 5 |
 
 Inside each stage, about a quarter of the marks go to the prediction, a quarter to the measurement,

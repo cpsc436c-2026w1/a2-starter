@@ -70,7 +70,7 @@ def run_stage1(trips_glob, out_path, window):
 
     # wall_s is the stage's headline duration (the second pass end to end: read, filter
     # and write), so the parser has the same key here as it has for every Spark phase.
-    # ended_at_epoch_s lets Q4.1 bound the gap between one stage and the next.
+    # ended_at_epoch_s lets Q3.1 bound the gap between one stage and the next.
     return {"wall_s": round(t_total, 1), "t_total_s": round(t_total, 2),
             "bytes_on_disk": bytes_on_disk, "bytes_needed": bytes_needed,
             "rows_in": rows_in, "rows_out": rows_out,
