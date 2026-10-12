@@ -40,3 +40,6 @@ tr.secured-row .wk { color: var(--secured); font-weight:700; }
 /* a file name that links to the repo should look like a link, not like plain code */
 a > code { color: var(--bs-link-color); text-decoration: underline; text-underline-offset: 2px; }
 a:hover > code { color: var(--bs-link-hover-color); }
+
+/* text changed after release, as in the lecture decks */
+.chg { color: #c0392b; }

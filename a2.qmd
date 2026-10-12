@@ -366,8 +366,8 @@ predicted_seconds ≈ bytes_to_read / read_rate
   rate you will use, in MB per second, and say in one sentence why you chose it.
 
 All data has to come through the network before DuckDB can read it, so the network is one
-candidate limit (L2's throughput table). Compare the rate you achieve with it, and say what else
-could be the limit (L4: the CPU that decompresses and parses).
+candidate limit (L2's throughput table). [After you measure in 1.2, compare the rate you achieve
+(`bytes_needed / t_read_s`)]{.chg} with it, and say what else could be the limit ([L5]{.chg}).
 
 Write your prediction into the `predicted_s` cell of your Stage 1 row before you run the stage. The
 script prints the measured time, so run it only after your prediction is written.
@@ -465,9 +465,12 @@ Once its row is on your laptop and screenshot 1 is taken, nothing later needs th
 | `bytes_on_disk` | compressed size of every column in the files it opened |
 | `bytes_needed` | compressed size of the 6 columns it read |
 | `rows_in`, `rows_out` | rows before the filter, rows after |
+| [`t_read_s`]{.chg} | [the seconds spent reading the needed columns]{.chg} |
 | `mb_per_s_per_core` | the per-core read rate the run achieved |
 
 Parse the log into your Stage 1 row and fill in `cost_usd` from the EC2 rate for ca-central-1.
+[The row leaves `startup_s`, `shuffle_write_bytes` and the three `task_` columns empty: they are Spark
+measurements, and we don't run Spark in Stage 1.]{.chg}
 
 ::: {.callout-tip icon=false title="📸 Screenshot 1"}
 The instance page while it runs: instance ID, type, launch time, CWL in the name. The instance ID
@@ -495,8 +498,9 @@ little next to it.
    out by an order of magnitude? Say which prediction was wrong and in which direction.
 2. You read less data than the files hold. Name what in the file format let the reader skip
    the rest, and say where it doesn't help and why.
-3. The instance page advertises 12.5 Gb/s and you did not get it. What is that figure measuring, and
-   why is it the wrong number to predict a sustained read with?
+3. [Based on your achieved read rate (`bytes_needed / t_read_s`), write down]{.chg} what the instance
+   page's 12.5 Gb/s is measuring, and why it is the wrong number to predict a sustained read with
+   ([L2, "What scales with the size?", and L5]{.chg}).
 4. You could have run this stage on 3 instances instead of 1, at roughly 3 times the hourly rate.
    What would that have bought here, and what would the work need to look like for extra instances to
    help?
