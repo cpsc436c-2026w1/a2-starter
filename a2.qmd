@@ -295,7 +295,7 @@ Columns:
 it has to match a screenshot
 - `predicted_s` is your prediction, entered **before** the run
 - `wall_s` is the measured run time and `startup_s` the measured wait before it, kept in separate columns
-- `cost_usd` comes from AWS's price pages for [EC2 on-demand instances](https://aws.amazon.com/ec2/pricing/on-demand/) and [EMR](https://aws.amazon.com/emr/pricing/), read for ca-central-1.
+- `cost_usd` comes from AWS's price pages for [EC2 on-demand instances](https://aws.amazon.com/ec2/pricing/on-demand/) and [EMR](https://aws.amazon.com/emr/pricing/), read for ca-central-1 [(operating system: Linux. Choosing Ubuntu shows Ubuntu Pro, whose price includes a small licence fee. That is not the system we use)]{.chg}.
 
 Write the stages' `predicted_s` from the prediction block
 first, before you launch anything. 
